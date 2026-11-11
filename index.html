@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Liquid Handling Lab — Student Simulator</title>
+<style>
+:root{--navy:#26394b;--blue:#dce7f1;--line:#aebbc8;--panel:#f1f4f7;--ink:#263748;--muted:#667789;--accent:#2877b8;--green:#398b70;--yellow:#f3dc78}
+*{box-sizing:border-box}body{margin:0;background:#e7ebef;color:var(--ink);font:13px "Segoe UI",Arial,sans-serif}
+header{background:#dce3ea;border-bottom:1px solid #9eabb8;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{font-size:18px;font-weight:700}.sub{font-size:11px;color:#586b7d}
+.toolbar{display:flex;gap:5px;flex-wrap:wrap}.toolbar button,.btn{border:1px solid #aab6c2;background:#f7f8fa;color:#27394a;padding:7px 10px;border-radius:3px;cursor:pointer;font-size:12px}
+button:hover{filter:brightness(.97)}button.primary{background:var(--accent);color:white;border-color:#1c6198}
+main{padding:10px;max-width:1600px;margin:auto}
+.topgrid{display:grid;grid-template-columns:260px minmax(420px,1fr);gap:9px}
+.panel{background:#f8f9fb;border:1px solid #aeb9c4;border-radius:3px;min-width:0;overflow:hidden}
+.phead{background:#dce5ed;color:#293d50;font-weight:700;padding:8px 10px;border-bottom:1px solid #b4c0cb;display:flex;justify-content:space-between;gap:8px}
+.library{padding:8px;background:#e9edf2;max-height:650px;overflow:auto}
+.tabs{display:flex;gap:3px;flex-wrap:wrap;padding:6px;background:#dce5ed}
+.tabs button{font-size:10px;padding:6px 7px;border:1px solid #aab8c6;background:#edf1f5;cursor:pointer}
+.tabs button.active{background:var(--yellow);font-weight:bold}
+.cat{font-weight:700;border-bottom:1px solid #c5cfd8;margin:9px 0 3px;padding:4px 2px;font-size:11px}
+.libitem{padding:6px 7px;margin:2px 0;border:1px solid transparent;background:#f5f7f9;cursor:grab;display:flex;align-items:center;gap:7px;font-size:11px}
+.libitem:hover{background:#d9e8f6;border-color:#9bb5ce}.libitem:active{cursor:grabbing}
+.glyph{width:20px;height:19px;border:1px solid #aab8c6;background:#dce7f1;display:grid;place-items:center;font-weight:bold}
+.hint{padding:8px;background:#e5ebf1;color:#4f6275;font-size:11px}
+.script{background:#f0f2f4;min-height:250px;padding:7px;max-height:440px;overflow:auto}
+.command{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #c6ced6;padding:7px;margin-bottom:3px;cursor:pointer;font-size:11px}
+.command.selected{border:2px solid #4386bf;background:#e8f2fb}.command .n{width:20px;color:#78899a}.command .detail{flex:1}.command small{display:block;color:#718193;margin-top:2px}.command button{border:0;background:transparent;color:#a4544b;cursor:pointer}
+.empty{text-align:center;padding:45px 10px;color:#718193}
+.props{padding:10px;min-height:95px}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.fields label{font-size:11px;color:#526476}.fields input,.fields select{display:block;width:100%;margin-top:4px;padding:7px;border:1px solid #b8c3ce;background:white;border-radius:3px}
+.workpanel{margin-top:9px}.workbody{padding:10px;background:#e8edf2}
+.deckscroll{overflow-x:auto;padding-bottom:7px}
+.deck{display:grid;grid-template-columns:repeat(10,minmax(125px,1fr));gap:7px;min-width:1320px;padding:9px;background:#d6dfe7;border:2px solid #9eafbd}
+.site{background:#eef2f5;border:2px solid #929faa;min-height:150px;padding:6px;position:relative}
+.sitehead{font-size:11px;font-weight:700;color:#42566a;border-bottom:1px solid #c1cbd4;padding-bottom:5px;margin-bottom:6px}
+.carrier{border:2px solid #8e9ba7;background:#d4d9de;min-height:105px;padding:5px;display:flex;flex-direction:column;gap:4px}
+.carriername{text-align:center;font-size:10px;font-weight:700;color:#3d4b58}
+.labware{background:#6ca8d6;border:1px solid #477da8;color:#102f48;padding:5px 3px;text-align:center;font-size:9px;min-height:25px;cursor:grab}
+.labware.green{background:#75b89b;border-color:#47876c}.labware.yellow{background:#f0d56c;border-color:#b49a40}.labware.blue{background:#77b5df;border-color:#4c88b1}.labware.purple{background:#b9a6d5;border-color:#8b75a9}
+.dropzone{border:1px dashed #8494a2;min-height:30px;padding:3px;font-size:9px;color:#718193;text-align:center}
+.site.over,.carrier.over,.dropzone.over{outline:2px solid #2877b8;background:#d8ebfa}
+.decknote{font-size:11px;color:#586b7d;margin:0 0 8px}
+.lower{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}
+.monitor{padding:10px}.bar{height:9px;background:#e1e6eb;border-radius:5px;overflow:hidden}.bar>div{height:100%;width:0;background:#398b70}
+.log{font:11px Consolas,monospace;max-height:130px;overflow:auto;line-height:1.7;color:#4c6072}
+.status{font-size:11px;font-weight:700}
+.modalback{position:fixed;inset:0;background:#14233388;display:none;align-items:center;justify-content:center;padding:15px;z-index:5}
+.modal{background:#f8f9fb;border:1px solid #9eabb8;max-width:540px;width:100%;padding:15px;border-radius:5px;box-shadow:0 8px 30px #0003}
+.modal h3{margin:0 0 8px}.modal p{font-size:12px;color:#536577;line-height:1.5}
+.modal .actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}
+@media(max-width:850px){.topgrid{grid-template-columns:1fr}.library{max-height:300px}.lower{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+ <div><div class="brand">Liquid Handling Lab</div><div class="sub">Independent student training simulator</div></div>
+ <div class="toolbar">
+  <button id="validate" class="primary">Validate</button><button id="run" class="primary">▶ Run simulation</button>
+ </div>
+</header>
+<main>
+<div class="topgrid">
+ <section class="panel">
+  <div class="phead">Control Bar</div>
+  <div class="tabs" id="tabs">
+   <button class="active" data-tab="Commands">Commands</button><button data-tab="Liquid Classes">Liquid Classes</button><button data-tab="Carriers">Carriers</button><button data-tab="Labware">Labware</button>
+  </div>
+  <div class="library" id="library"></div>
+  <div class="hint">Drag commands into the Script Editor. For the worktable, first drag a carrier onto one of the 10 deck positions, then drag labware onto that carrier.</div>
+ </section>
+ <section class="panel">
+  <div class="phead">Script Editor <span id="commandCount" style="font-weight:400">0 commands</span></div>
+  <div class="script" id="script">
+   <div class="empty">Drag commands here to build your method.<br><br>Commands can be selected to edit their properties and dragged to reorder.</div>
+  </div>
+  <div class="hint">Select a command to display its parameters in the INFOPAD below. Commands are educational representations of liquid-handling operations, not executable instrument code.</div>
+  <div class="phead">INFOPAD — Command Properties</div>
+  <div class="props" id="properties"><span style="color:#718193;font-size:11px">Select a command to inspect and edit its parameters.</span></div>
+ </section>
+</div>
+<section class="panel workpanel">
+ <div class="phead">INFOPAD — Worktable Editor</div>
+ <div class="workbody">
+  <p class="decknote"><b>Worktable setup:</b> Each numbered grey outline represents a carrier position. Labware sits <b>on top of</b> its carrier. A carrier may contain multiple sites for labware. Build the deck by placing the carrier first, then its compatible labware.</p>
+  <div class="deckscroll"><div class="deck" id="deck"></div></div>
+  <div id="deckInfo" class="hint">No worktable item selected.</div>
+ </div>
+</section>
+<div class="lower">
+ <section class="panel"><div class="phead">Method Execution</div><div class="monitor">
+  <div class="flex" style="display:flex;justify-content:space-between;gap:8px"><span class="status" id="status">STATUS: NOT VALIDATED</span><span id="percent">0%</span></div>
+  <div class="bar" style="margin:8px 0"><div id="progress"></div></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" id="stepRun">Run next step</button><button class="btn" id="resetRun">Reset run</button></div>
+  <div class="hint" id="runFeedback" style="margin-top:8px">Validate your method before running. The simulator checks the worktable and method structure.</div>
+ </div></section>
+ <section class="panel"><div class="phead">Execution Log</div><div class="monitor"><div class="log" id="log">SYSTEM READY<br>WAITING FOR METHOD VALIDATION</div></div></section>
+</div>
+<p class="sub" style="padding:8px 2px">Independent educational simulator. Not affiliated with, endorsed by, or produced by Tecan. Tecan, Freedom EVO, and EVOware are trademarks of their respective owner. This simulator does not connect to an instrument or generate executable instrument methods.</p>
+</main>
+<div class="modalback" id="modalBack"><div class="modal"><h3 id="modalTitle">Configure item</h3><div id="modalBody"></div><div class="actions"><button class="btn" id="cancelModal">Cancel</button><button class="btn primary" id="confirmModal">Place item</button></div></div></div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const categories={
+ "Commands":[["LiHa",["Aspirate","Dispense","Mix","Get DiTis","Drop DiTis"]],["Programming",["Start Timer","Wait for Timer","User Prompt","Begin Loop","End Loop","Set Variable","If – Then"]]],
+ "Liquid Classes":[["Liquid Classes",["Water","Glycerol","Ethanol"]]],
+ "Carriers":[["Microplate Carriers",["MP 4Pos flat","MP 4Pos flat - MagPlate"]],["DiTi Carriers",["DiTi 2Pos + Waste"]],["Trough Carriers",["Trough 3Pos 25+100ml"]],["Tube Carriers",["Tube 13mm 16 Pos"]]],
+ "Labware":[["Microplates",["96 Well Microplate","96 Well Microplate - MagPlat"]],["Tips",["DiTi 1000µL LiHa","DiTi 200µL LiHa"]],["Waste",["DiTi Waste"]],["Troughs",["Trough 100ml"]],["Tubes",["1.5mL tube","0.2mL tube"]]]
+};
+const carrierTypes={
+ "MP 4Pos flat":{sites:4,compatible:["96 Well Microplate"],label:"4-position microplate carrier"},
+ "MP 4Pos flat - MagPlate":{sites:4,compatible:["96 Well Microplate - MagPlat"],label:"4-position magnetic microplate carrier"},
+ "DiTi 2Pos + Waste":{sites:3,compatible:["DiTi 1000µL LiHa","DiTi 200µL LiHa","DiTi Waste"],label:"Two DiTi racks plus waste"},
+ "Trough 3Pos 25+100ml":{sites:3,compatible:["Trough 100ml"],label:"Three trough positions"},
+ "Tube 13mm 16 Pos":{sites:16,compatible:["1.5mL tube","0.2mL tube"],label:"16-position tube carrier"}
+};
+const colors={"96 Well Microplate":"blue","96 Well Microplate - MagPlat":"blue","DiTi 1000µL LiHa":"yellow","DiTi 200µL LiHa":"yellow","DiTi Waste":"green","Trough 100ml":"green","1.5mL tube":"purple","0.2mL tube":"purple"};
+const icons={"Aspirate":"↑","Dispense":"↓","Mix":"↻","Get DiTis":"▤","Drop DiTis":"▧","Begin Loop":"↻","End Loop":"↘","Set Variable":"ƒ","If – Then":"◇","User Prompt":"▣","Start Timer":"◷","Wait for Timer":"◴"};
+const defaults={"Get DiTis":{tips:"DiTi 200µL LiHa",channels:[1,2,3,4,5,6,7,8]},"Drop DiTis":{channels:[1,2,3,4,5,6,7,8]},"Aspirate":{source:"",volume:23,liquidClass:"Water",channels:[1,2,3,4,5,6,7,8],wells:[]},"Dispense":{destination:"",volume:23,liquidClass:"Water",channels:[1,2,3,4,5,6,7,8],wells:[]},"Mix":{volume:100,cycles:3},"Begin Loop":{counter:"column",start:1,end:2},"End Loop":{},"Set Variable":{name:"sample_count",value:16},"If – Then":{condition:"sample_count > 0"},"User Prompt":{message:"Check reagent reservoirs"},"Start Timer":{seconds:30},"Wait for Timer":{timer:"mix_timer"}};
+let method=[],selected=-1,deck=Array.from({length:10},()=>null),selectedDeck=null,validated=false,runIndex=0,runSteps=[],dragItem=null,dragCommand=null;
+function log(s){$("log").innerHTML+=`<br>${new Date().toLocaleTimeString()} ${s}`;$("log").scrollTop=$("log").scrollHeight}
+function getLabwareItems(){return deck.flatMap((c,pos)=>c?c.items.map((x,site)=>x?{...x,pos,site,carrier:c.name}:null).filter(Boolean):[])}
+function getLabwareLabels(){return getLabwareItems().map(x=>x.label)}
+function wellLayout(item){if(item.name.startsWith("96 Well Microplate"))return {rows:8,cols:12,kind:"plate"};if(item.name==="Trough 100ml")return {rows:8,cols:1,kind:"trough"};if(item.carrier==="Tube 13mm 16 Pos")return {rows:16,cols:1,kind:"tubes"};if(item.name==="1.5mL tube"||item.name==="0.2mL tube")return {rows:1,cols:1,kind:"single"};if(item.name.startsWith("DiTi"))return {rows:8,cols:1,kind:"tips"};return {rows:1,cols:1,kind:"single"}}
+function mountedTipTypesBefore(index){let mounted={};for(let i=0;i<index;i++){let c=method[i];if(c.name==="Get DiTis"){(c.params.channels||[]).forEach(ch=>mounted[ch]=c.params.tips)}if(c.name==="Drop DiTis"){(c.params.channels||[]).forEach(ch=>delete mounted[ch])}}return mounted}
+function selectedChannels(p){return (p.channels||[]).map(Number).sort((a,b)=>a-b)}
+function renderLibrary(tab){let el=$("library");el.innerHTML="";(categories[tab]||[]).forEach(([cat,items])=>{let h=document.createElement("div");h.className="cat";h.textContent=cat;el.append(h);items.forEach(name=>{let b=document.createElement("div");b.className="libitem";b.draggable=true;b.innerHTML=`<span class="glyph">${icons[name]||"▦"}</span><span>${name}</span>`;b.addEventListener("dragstart",e=>{dragItem={name,kind:tab==="Carriers"?"carrier":tab==="Labware"?"labware":tab==="Commands"?"command":"reference"};e.dataTransfer.setData("text/plain",name)});b.addEventListener("click",()=>{dragItem={name,kind:tab==="Carriers"?"carrier":tab==="Labware"?"labware":tab==="Commands"?"command":"reference"};if(dragItem.kind==="command")addCommand(name);else if(dragItem.kind==="carrier"||dragItem.kind==="labware")$("deckInfo").textContent=`Selected ${name}. Drag it onto the worktable${dragItem.kind==="labware"?" and choose a carrier site":" position"}.`;else $("deckInfo").textContent=`Liquid class selected: ${name}. Set this in the command properties.`});el.append(b)})})}
+function addCommand(name){method.push({name,params:{...(defaults[name]||{})},id:Math.random().toString(36).slice(2)});selected=method.length-1;validated=false;renderMethod()}
+function renderMethod(){let s=$("script");s.innerHTML="";if(!method.length)s.innerHTML='<div class="empty">Drag commands here to build your method.<br><br>Commands can be selected to edit their properties and dragged to reorder.</div>';method.forEach((c,i)=>{let row=document.createElement("div");row.className="command"+(i===selected?" selected":"");row.draggable=true;row.innerHTML=`<span class="n">${String(i+1).padStart(2,"0")}</span><b>${icons[c.name]||"▣"}</b><span class="detail"><b>${c.name}</b><small>${Object.entries(c.params).map(([k,v])=>`${k}: ${v}`).join(" • ")||"No parameters"}</small></span><button title="Remove">✕</button>`;row.addEventListener("click",e=>{if(e.target.tagName==="BUTTON"){method.splice(i,1);selected=-1;validated=false;renderMethod();return}selected=i;renderMethod()});row.addEventListener("dragstart",()=>dragCommand=i);row.addEventListener("dragover",e=>e.preventDefault());row.addEventListener("drop",e=>{e.preventDefault();if(dragCommand!==null&&dragCommand!==i){let x=method.splice(dragCommand,1)[0];method.splice(i,0,x);selected=i;dragCommand=null;validated=false;renderMethod()}});s.append(row)});$("commandCount").textContent=method.length+" commands";renderProperties()}
+function renderProperties(){
+ let p=$("properties");if(selected<0||!method[selected]){p.innerHTML='<span style="font-size:11px;color:#718193">Select a command to inspect and edit its parameters.</span>';return}
+ let c=method[selected],fhtml='';
+ p.innerHTML=`<b>${c.name}</b><p style="font-size:11px;color:#667789">Configure the selected command.</p><div id="paramFields"></div><div id="visualPicker"></div><div id="channelError" style="color:#a33;font-size:11px;margin-top:6px"></div><button class="btn primary" id="applyParams" style="margin-top:9px">Apply parameters</button>`;
+ let f=$("paramFields");
+ const addField=(key,label,control)=>{let wrap=document.createElement('label');wrap.textContent=label;wrap.style.display='block';wrap.style.margin='7px 0';control.dataset.key=key;wrap.append(control);f.append(wrap)};
+ const addSelect=(key,label,opts,value)=>{let el=document.createElement('select');el.style.width='100%';opts.forEach(v=>{let o=document.createElement('option');o.value=v;o.textContent=v;el.append(o)});el.value=value||'';addField(key,label,el)};
+ if(c.name==='Get DiTis'){addSelect('tips','Tip rack type',['DiTi 1000µL LiHa','DiTi 200µL LiHa'],c.params.tips)}
+ if(['Aspirate','Dispense'].includes(c.name)){let key=c.name==='Aspirate'?'source':'destination';let sel=document.createElement('select');sel.style.width='100%';sel.innerHTML='<option value="">Select labeled labware</option>';getLabwareItems().forEach(x=>{let o=document.createElement('option');o.value=x.label;o.textContent=`${x.label} — ${x.name}`;sel.append(o)});sel.value=c.params[key]||'';addField(key,c.name==='Aspirate'?'Source labware':'Destination labware',sel);addField('volume','Volume (µL)',Object.assign(document.createElement('input'),{type:'number',min:'0',step:'0.1',value:c.params.volume}));addSelect('liquidClass','Liquid class',['Water','Glycerol','Ethanol'],c.params.liquidClass)}
+ if(c.name==='Start Timer')addField('seconds','Timer length (seconds)',Object.assign(document.createElement('input'),{type:'number',min:'0',value:c.params.seconds||0}));
+ if(c.name==='Mix'){addField('volume','Volume (µL)',Object.assign(document.createElement('input'),{type:'number',min:'0',value:c.params.volume}));addField('cycles','Mix cycles',Object.assign(document.createElement('input'),{type:'number',min:'1',value:c.params.cycles}))}
+ if(c.name==='Begin Loop'){addField('counter','Loop variable',Object.assign(document.createElement('input'),{value:c.params.counter||''}));addField('start','Start',Object.assign(document.createElement('input'),{type:'number',value:c.params.start||1}));addField('end','End',Object.assign(document.createElement('input'),{type:'number',value:c.params.end||1}))}
+ if(c.name==='Set Variable'){addField('name','Variable name',Object.assign(document.createElement('input'),{value:c.params.name||''}));addField('value','Value',Object.assign(document.createElement('input'),{type:'number',value:c.params.value||0}))}
+ if(c.name==='If – Then')addField('condition','Condition',Object.assign(document.createElement('input'),{value:c.params.condition||''}));
+ if(c.name==='User Prompt')addField('message','Prompt message',Object.assign(document.createElement('input'),{value:c.params.message||''}));
+ if(c.name==='Wait for Timer')addField('timer','Timer name',Object.assign(document.createElement('input'),{value:c.params.timer||''}));
+ if(['Get DiTis','Drop DiTis','Aspirate','Dispense'].includes(c.name)){
+   let area=$("visualPicker"),chosen=new Set(selectedChannels(c.params));let title=document.createElement('div');title.innerHTML='<b>LiHa channels</b> <span style="color:#657789;font-size:11px">Select channels 1–8</span>';area.append(title);
+   let strip=document.createElement('div');strip.style.cssText='display:grid;grid-template-columns:repeat(8,minmax(30px,1fr));gap:5px;margin:7px 0 12px';
+   for(let n=1;n<=8;n++){let lab=document.createElement('label');lab.style.cssText='display:flex;align-items:center;justify-content:center;gap:3px;border:1px solid #bdc8d2;background:#edf2f6;padding:6px 2px;font-size:11px';let cb=document.createElement('input');cb.type='checkbox';cb.checked=chosen.has(n);cb.value=n;cb.className='channelcheck';lab.append(cb,document.createTextNode(String(n)));strip.append(lab)}area.append(strip);
+   if(['Aspirate','Dispense'].includes(c.name)){
+     let wellWrap=document.createElement('div');wellWrap.innerHTML='<b>Labware positions</b> <span style="font-size:11px;color:#657789">Select one position per active channel</span>';let grid=document.createElement('div');grid.style.cssText='display:grid;gap:3px;margin-top:7px;max-width:520px';wellWrap.append(grid);area.append(wellWrap);
+     const rebuild=()=>{grid.innerHTML='';let label=sel.value;let item=getLabwareItems().find(x=>x.label===label);if(!item){grid.textContent='Choose labeled labware to display its wells/positions.';return}let layout=wellLayout(item);grid.style.gridTemplateColumns=`repeat(${layout.cols},minmax(18px,1fr))`;let selectedW=new Set(c.params.wells||[]);for(let r=0;r<layout.rows;r++)for(let col=0;col<layout.cols;col++){let well=layout.kind==='plate'?String.fromCharCode(65+r)+(col+1):layout.kind==='tubes'?`Tube ${r+1}`:layout.kind==='trough'?`Channel ${r+1}`:item.label;let dot=document.createElement('button');dot.type='button';dot.textContent='●';dot.title=well;dot.style.cssText=`border:1px solid ${selectedW.has(well)?'#1e649b':'#9eabb8'};background:${selectedW.has(well)?'#c6e3f7':'#f7f9fb'};color:${selectedW.has(well)?'#17649d':'#718193'};padding:3px 1px;border-radius:4px;font-size:13px;cursor:pointer;min-width:18px`;dot.onclick=()=>{if(selectedW.has(well))selectedW.delete(well);else selectedW.add(well);c.params.wells=[...selectedW];rebuild()};grid.append(dot)}
+     };sel.addEventListener('change',rebuild);rebuild();
+   }
+ }
+ $("applyParams").onclick=()=>{f.querySelectorAll('input,select').forEach(x=>{let v=x.value,k=x.dataset.key;c.params[k]=['volume','cycles','start','end','value','seconds'].includes(k)&&v!==''?Number(v):v});if(['Get DiTis','Drop DiTis','Aspirate','Dispense'].includes(c.name))c.params.channels=[...$("visualPicker").querySelectorAll('.channelcheck:checked')].map(x=>Number(x.value));validated=false;renderMethod()};
+}
+function placeLabware(c,j,name){if(!carrierTypes[c.name].compatible.includes(name)){alert("This labware is not compatible with this carrier.");return}if(c.items[j]&&!confirm("Replace labware in this site?"))return;let defaultLabel=name;let label=prompt("Enter a label for this labware (this label will appear in source/destination dropdowns):",defaultLabel);if(label===null)return;if(!label.trim()){alert("A labware label is required.");return}c.items[j]={name,label:label.trim()};selectedDeck={pos:deck.indexOf(c),site:j};log(`LABWARE PLACED: ${label.trim()} (${name}) ON ${c.name}`);dragItem=null;validated=false;renderDeck()}
+function renderDeck(){let d=$("deck");d.innerHTML="";deck.forEach((c,i)=>{let site=document.createElement("div");site.className="site";site.dataset.pos=i+1;site.innerHTML=`<div class="sitehead">Position ${i+1}</div>`;site.addEventListener("dragover",e=>{e.preventDefault();site.classList.add("over")});site.addEventListener("dragleave",()=>site.classList.remove("over"));site.addEventListener("drop",e=>{e.preventDefault();site.classList.remove("over");if(!dragItem)return;if(dragItem.kind==="carrier"){if(deck[i]){alert("This position already has a carrier. Remove it before replacing it.");return}deck[i]={name:dragItem.name,items:Array(carrierTypes[dragItem.name].sites).fill(null)};selectedDeck={pos:i,site:null};log(`CARRIER PLACED: ${dragItem.name} AT POSITION ${i+1}`);dragItem=null;validated=false;renderDeck()}else if(dragItem.kind==="labware"){if(!deck[i]){alert("Place a carrier at this position first.");return}let free=deck[i].items.findIndex(x=>x===null);if(free<0){alert("All sites on this carrier are occupied.");return}placeLabware(deck[i],free,dragItem.name)}});site.addEventListener("click",()=>{selectedDeck={pos:i,site:null};showDeckInfo()});if(c){let carrier=document.createElement("div");carrier.className="carrier";let title=document.createElement("div");title.className="carriername";title.textContent=c.name;carrier.append(title);c.items.forEach((item,j)=>{let z=document.createElement("div");z.className="dropzone";z.textContent=item?`${item.label} (${item.name})`:`Site ${j+1} — drop labware here`;z.addEventListener("dragover",e=>{e.preventDefault();z.classList.add("over")});z.addEventListener("dragleave",()=>z.classList.remove("over"));z.addEventListener("drop",e=>{e.preventDefault();e.stopPropagation();z.classList.remove("over");if(dragItem?.kind==="labware")placeLabware(c,j,dragItem.name)});if(item){z.className="labware "+(colors[item.name]||"blue");z.textContent=item.label;z.title=`${item.name} — click to inspect/remove`;z.onclick=e=>{e.stopPropagation();selectedDeck={pos:i,site:j};showDeckInfo()}}carrier.append(z)});site.append(carrier)}else{let empty=document.createElement("div");empty.style.cssText="font-size:10px;color:#8a98a5;padding:28px 2px;text-align:center";empty.textContent="Empty carrier position";site.append(empty)}d.append(site)});showDeckInfo()}
+function showDeckInfo(){let x=selectedDeck;if(!x){$("deckInfo").textContent="No worktable item selected.";return}let c=deck[x.pos];if(!c){$("deckInfo").textContent=`Position ${x.pos+1} is empty. Place a carrier here first.`;return}if(x.site!==null&&x.site!==undefined){let item=c.items[x.site];$("deckInfo").innerHTML=`<b>Position ${x.pos+1} • Site ${x.site+1}</b> — ${item?`${item.label} (${item.name})`:"Empty"}<br><button class="btn" id="removeItem">Remove labware</button>`;$("removeItem").onclick=()=>{c.items[x.site]=null;validated=false;renderDeck();log(`LABWARE REMOVED FROM POSITION ${x.pos+1}, SITE ${x.site+1}`)}}else{$("deckInfo").innerHTML=`<b>Position ${x.pos+1}</b> — Carrier: ${c.name}<br>${c.items.filter(Boolean).length} / ${c.items.length} labware sites occupied. <button class="btn" id="removeCarrier">Remove carrier and its labware</button>`;$("removeCarrier").onclick=()=>{if(confirm("Remove this carrier and all labware on it?")){deck[x.pos]=null;validated=false;renderDeck();log(`CARRIER REMOVED FROM POSITION ${x.pos+1}`)}}}}
+function validate(){
+ let errors=[];if(!method.length)errors.push('The script is empty. Add commands before validating.');
+ let items=getLabwareItems();if(!deck.some(Boolean))errors.push('No carriers are placed on the worktable.');
+ let mounted={};
+ const loopStack=[];
+ method.forEach((c,i)=>{
+  if(c.name==='Begin Loop') loopStack.push(i);
+  if(c.name==='End Loop'){if(!loopStack.length)errors.push(`End Loop (command ${i+1}): there is no matching Begin Loop.`);else loopStack.pop();}
+  let ch=selectedChannels(c.params);
+  if(['Get DiTis','Drop DiTis','Aspirate','Dispense'].includes(c.name)&&!ch.length)errors.push(`${c.name} (command ${i+1}): select at least one LiHa channel.`);
+  if(c.name==='Get DiTis'){
+   let hasRack=items.some(x=>x.name===c.params.tips);if(!hasRack)errors.push(`Get DiTis (command ${i+1}): ${c.params.tips} is not mounted on the worktable.`);
+   ch.forEach(n=>{if(mounted[n])errors.push(`Get DiTis (command ${i+1}): channel ${n} already has a tip mounted.`);else if(hasRack)mounted[n]=c.params.tips});
+  }
+  if(['Aspirate','Dispense'].includes(c.name)){
+   ch.forEach(n=>{if(!mounted[n])errors.push(`${c.name} (command ${i+1}): channel ${n} has no tip mounted. Add Get DiTis for this channel before pipetting.`)});
+   if(Number(c.params.volume)<=0)errors.push(`${c.name} (command ${i+1}): volume must be greater than zero.`);
+   let key=c.name==='Aspirate'?'source':'destination',item=items.find(x=>x.label===c.params[key]);if(!item)errors.push(`${c.name} (command ${i+1}): select a valid labeled ${key} labware item.`);
+   else {let layout=wellLayout(item),wells=c.params.wells||[];if(wells.length!==ch.length)errors.push(`${c.name} (command ${i+1}): select exactly ${ch.length} labware position dot(s) to match the ${ch.length} active channel(s).`);let max=layout.rows*layout.cols;if(wells.length>max)errors.push(`${c.name} (command ${i+1}): too many positions selected for this labware.`)}
+  }
+  if(c.name==='Drop DiTis')ch.forEach(n=>{if(!mounted[n])errors.push(`Drop DiTis (command ${i+1}): channel ${n} has no mounted tip to drop.`);else delete mounted[n]});
+  if(c.name==='Start Timer'&&Number(c.params.seconds)<0)errors.push(`Start Timer (command ${i+1}): timer length cannot be negative.`);
+ });
+ if(loopStack.length) loopStack.forEach(i=>errors.push(`Begin Loop (command ${i+1}): missing matching End Loop.`));
+ validated=errors.length===0;$('status').textContent=validated?'STATUS: VALIDATION PASSED':'STATUS: VALIDATION FAILED';$('runFeedback').innerHTML=validated?'✓ Script logic checks passed: channels, mounted tips, labeled labware, selected positions, and command sequence.':'<b>Resolve these issues:</b><br>'+errors.map(x=>'• '+x).join('<br>');$('log').innerHTML='METHOD VALIDATION<br>'+(validated?'VALIDATION PASSED':errors.map(x=>'ERROR: '+x).join('<br>'));$('run').disabled=!validated;$('stepRun').disabled=!validated;log(validated?'METHOD READY':'VALIDATION ERRORS FOUND');
+}
+function prepareRun(){runSteps=["Initialize method","Check carrier and labware positions",...method.map((c,i)=>`Execute command ${i+1}: ${c.name}`),"Method complete"];runIndex=0;$("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent="STATUS: READY TO RUN";$("stepRun").disabled=false}
+function nextStep(){if(!validated)return;if(runIndex>=runSteps.length){$("stepRun").disabled=true;return}let s=runSteps[runIndex++];log(s.toUpperCase());$("runFeedback").textContent=s;$("progress").style.width=(runIndex/runSteps.length*100)+"%";$("percent").textContent=Math.round(runIndex/runSteps.length*100)+"%";$("status").textContent=runIndex===runSteps.length?"STATUS: SIMULATION COMPLETE":"STATUS: RUNNING";if(runIndex===runSteps.length)$("stepRun").disabled=true}
+$("tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("tabs").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));renderLibrary(b.dataset.tab)});
+$("script").addEventListener("dragover",e=>e.preventDefault());$("script").addEventListener("drop",e=>{e.preventDefault();if(dragItem?.kind==="command"){addCommand(dragItem.name);dragItem=null}});
+$("validate").onclick=validate;$("run").onclick=()=>{if(!validated)validate();if(validated){prepareRun();while(runIndex<runSteps.length)nextStep()}};$("stepRun").onclick=nextStep;$("resetRun").onclick=()=>{runIndex=0;$("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent=validated?"STATUS: READY":"STATUS: NOT VALIDATED";$("stepRun").disabled=!validated;$("log").innerHTML="SIMULATION RESET"};
+renderLibrary("Commands");renderMethod();renderDeck();$("run").disabled=true;$("stepRun").disabled=true;
+})();
+</script>
+</body>
+</html>
