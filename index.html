@@ -229,7 +229,7 @@ function validate(){
     const L=wellLayout(item);
     if(wells.length!==ch.length)add("error",n,"Select exactly "+ch.length+" labware position"+(ch.length===1?"":"s")+" for the selected channels.");
     if(new Set(wells).size!==wells.length)add("error",n,"The same labware position is selected more than once.");
-    const cols=new Set(wells.map(w=>L.kind==="plate"?Number(String(w).match(/\\d+$/)?.[0]):1));
+    const cols=new Set(wells.map(w=>L.kind==="plate"?Number(String(w).match(/\d+$/)?.[0]):1));
     if(cols.size>1)add("error",n,"Selected positions must be in one column for this eight-channel selection.");
    }
    const volume=Number(p.volume);
