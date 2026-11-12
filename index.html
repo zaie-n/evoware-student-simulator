@@ -45,6 +45,15 @@ main{padding:10px;max-width:1600px;margin:auto}
 .monitor{padding:10px}.bar{height:9px;background:#e1e6eb;border-radius:5px;overflow:hidden}.bar>div{height:100%;width:0;background:#398b70}
 .log{font:11px Consolas,monospace;max-height:130px;overflow:auto;line-height:1.7;color:#4c6072}
 .status{font-size:11px;font-weight:700}
+.validation-panel{margin-top:9px}
+.validation-summary{display:flex;gap:7px;flex-wrap:wrap;padding:9px 10px;background:#eef2f6;border-bottom:1px solid #c8d1da}
+.validation-count{font-size:11px;padding:4px 8px;border:1px solid #c4cdd6;background:#fff;border-radius:3px}
+.validation-list{padding:8px 10px;max-height:260px;overflow:auto}
+.validation-item{display:grid;grid-template-columns:76px minmax(0,1fr);gap:8px;padding:7px 5px;border-bottom:1px solid #e0e5e9;font-size:11px;line-height:1.45}
+.validation-item:last-child{border-bottom:0}
+.validation-severity{font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.3px}
+.validation-severity.error{color:#a3332b}.validation-severity.warning{color:#946500}.validation-severity.info{color:#356b91}
+.validation-empty{padding:12px;color:#526779;font-size:11px}
 .modalback{position:fixed;inset:0;background:#14233388;display:none;align-items:center;justify-content:center;padding:15px;z-index:5}
 .modal{background:#f8f9fb;border:1px solid #9eabb8;max-width:540px;width:100%;padding:15px;border-radius:5px;box-shadow:0 8px 30px #0003}
 .modal h3{margin:0 0 8px}.modal p{font-size:12px;color:#536577;line-height:1.5}
@@ -86,6 +95,11 @@ main{padding:10px;max-width:1600px;margin:auto}
   <div class="deckscroll"><div class="deck" id="deck"></div></div>
   <div id="deckInfo" class="hint">No worktable item selected.</div>
  </div>
+</section>
+<section class="panel validation-panel">
+ <div class="phead">Validation Results <span id="validationState" style="font-weight:400">Not checked</span></div>
+ <div class="validation-summary" id="validationSummary"><span class="validation-count">Run Validate to check this method.</span></div>
+ <div class="validation-list" id="validationResults"><div class="validation-empty">Validation findings will appear here, with the command number and a description of what needs attention.</div></div>
 </section>
 <div class="lower">
  <section class="panel"><div class="phead">Method Execution</div><div class="monitor">
@@ -176,14 +190,119 @@ function placeLabware(c,j,name){$("properties").classList.add("compact");if(!car
 function renderDeck(){let d=$("deck");d.innerHTML="";deck.forEach((c,i)=>{let site=document.createElement("div");site.className="site";site.dataset.pos=i+1;site.innerHTML=`<div class="sitehead">Position ${i+1}</div>`;site.addEventListener("dragover",e=>{e.preventDefault();site.classList.add("over")});site.addEventListener("dragleave",()=>site.classList.remove("over"));site.addEventListener("drop",e=>{e.preventDefault();site.classList.remove("over");if(!dragItem)return;if(dragItem.kind==="carrier"){if(deck[i]){alert("This position already has a carrier. Remove it before replacing it.");return}deck[i]={name:dragItem.name,items:Array(carrierTypes[dragItem.name].sites).fill(null)};selectedDeck={pos:i,site:null};log(`CARRIER PLACED: ${dragItem.name} AT POSITION ${i+1}`);dragItem=null;validated=false;$("properties").classList.add("compact");renderDeck()}else if(dragItem.kind==="labware"){if(!deck[i]){alert("Place a carrier at this position first.");return}let free=deck[i].items.findIndex(x=>x===null);if(free<0){alert("All sites on this carrier are occupied.");return}placeLabware(deck[i],free,dragItem.name)}});site.addEventListener("click",()=>{selectedDeck={pos:i,site:null};showDeckInfo()});if(c){let carrier=document.createElement("div");carrier.className="carrier";let title=document.createElement("div");title.className="carriername";title.textContent=c.name;carrier.append(title);c.items.forEach((item,j)=>{let z=document.createElement("div");z.className="dropzone";z.textContent=item?`${item.label} (${item.name})`:`Site ${j+1} — drop labware here`;z.addEventListener("dragover",e=>{e.preventDefault();z.classList.add("over")});z.addEventListener("dragleave",()=>z.classList.remove("over"));z.addEventListener("drop",e=>{e.preventDefault();e.stopPropagation();z.classList.remove("over");if(dragItem?.kind==="labware")placeLabware(c,j,dragItem.name)});if(item){z.className="labware "+(colors[item.name]||"blue");z.textContent=item.label;z.title=`${item.name} — click to inspect/remove`;z.onclick=e=>{e.stopPropagation();selectedDeck={pos:i,site:j};showDeckInfo()}}carrier.append(z)});site.append(carrier)}else{let empty=document.createElement("div");empty.style.cssText="font-size:10px;color:#8a98a5;padding:28px 2px;text-align:center";empty.textContent="Empty carrier position";site.append(empty)}d.append(site)});showDeckInfo()}
 function showDeckInfo(){let x=selectedDeck;if(!x){$("deckInfo").textContent="No worktable item selected.";return}let c=deck[x.pos];if(!c){$("deckInfo").textContent=`Position ${x.pos+1} is empty. Place a carrier here first.`;return}if(x.site!==null&&x.site!==undefined){let item=c.items[x.site];$("deckInfo").innerHTML=`<b>Position ${x.pos+1} • Site ${x.site+1}</b> — ${item?`${item.label} (${item.name})`:"Empty"}<br><button class="btn" id="removeItem">Remove labware</button>`;$("removeItem").onclick=()=>{c.items[x.site]=null;validated=false;renderDeck();log(`LABWARE REMOVED FROM POSITION ${x.pos+1}, SITE ${x.site+1}`)}}else{$("deckInfo").innerHTML=`<b>Position ${x.pos+1}</b> — Carrier: ${c.name}<br>${c.items.filter(Boolean).length} / ${c.items.length} labware sites occupied. <button class="btn" id="removeCarrier">Remove carrier and its labware</button>`;$("removeCarrier").onclick=()=>{if(confirm("Remove this carrier and all labware on it?")){deck[x.pos]=null;validated=false;renderDeck();log(`CARRIER REMOVED FROM POSITION ${x.pos+1}`)}}}}
 function validate(){
- let errors=[],items=getLabwareItems(),mounted={},stack=[];if(!method.length)errors.push("The script is empty.");if(!deck.some(Boolean))errors.push("No carriers are placed on the worktable.");
- method.forEach((c,i)=>{if(c.name==="Begin Loop"){stack.push(i);if(!String(c.params.loopName||"").trim())errors.push("Begin Loop "+(i+1)+": enter a loop name.");if(!Number.isInteger(Number(c.params.cycles))||Number(c.params.cycles)<1)errors.push("Begin Loop "+(i+1)+": cycles must be a positive whole number.")}if(c.name==="End Loop"){if(!stack.length)errors.push("End Loop "+(i+1)+": no matching Begin Loop.");else stack.pop()}
- let ch=selectedChannels(c.params);if(["Get DiTi","Drop DiTi","Aspirate","Dispense","Mix"].includes(c.name)&&!ch.length)errors.push(c.name+" "+(i+1)+": select at least one channel.");
- if(c.name==="Get DiTi"){let ok=items.some(x=>x.name===c.params.tips);if(!ok)errors.push("Get DiTi "+(i+1)+": select a tip rack currently on the worktable.");ch.forEach(n=>{if(mounted[n])errors.push("Get DiTi "+(i+1)+": channel "+n+" already has a tip.");else if(ok)mounted[n]=c.params.tips})}
- if(["Aspirate","Dispense","Mix"].includes(c.name)){ch.forEach(n=>{if(!mounted[n])errors.push(c.name+" "+(i+1)+": channel "+n+" has no mounted tip.")});let key=c.name==="Aspirate"?"source":c.name==="Dispense"?"destination":"target",item=items.find(x=>x.label===c.params[key]);if(!item)errors.push(c.name+" "+(i+1)+": select valid labeled labware.");else{let wells=c.params.wells||[],L=wellLayout(item);if(wells.length!==ch.length)errors.push(c.name+" "+(i+1)+": select exactly "+ch.length+" positions.");let cols=new Set(wells.map(w=>L.kind==="plate"?Number(String(w).match(/\d+$/)?.[0]):1));if(cols.size>1)errors.push(c.name+" "+(i+1)+": positions must be in one column.")}{let v=Number(c.params.volume);ch.forEach(n=>{let t=mounted[n],lo=t==="DiTi 1000µL LiHa"?10:t==="DiTi 200µL LiHa"?2:null,hi=t==="DiTi 1000µL LiHa"?1000:t==="DiTi 200µL LiHa"?200:null;if(!Number.isFinite(v)||v<=0)errors.push(c.name+" "+(i+1)+": enter a positive volume.");else if(lo!==null&&(v<lo||v>hi))errors.push(c.name+" "+(i+1)+": "+v+" µL is outside channel "+n+" tip range ("+lo+"–"+hi+" µL).")})}let lo=c.params.loopOptions;if(lo?.enabled){if(!stack.length)errors.push(c.name+" "+(i+1)+": loop options require this command to be inside a loop.");let scope=lo[key]||{};if(!Object.values(scope).some(x=>x?.enabled))errors.push(c.name+" "+(i+1)+": select a loop dimension or disable Loop options.")}}
- if(c.name==="Drop DiTi")ch.forEach(n=>{if(!mounted[n])errors.push("Drop DiTi "+(i+1)+": channel "+n+" has no tip.");else delete mounted[n]});if(c.name==="Start Timer"&&Number(c.params.seconds)<0)errors.push("Start Timer "+(i+1)+": timer cannot be negative.")});
- stack.forEach(i=>errors.push("Begin Loop "+(i+1)+": missing End Loop."));
- validated=!errors.length;$("status").textContent=validated?"STATUS: VALIDATION PASSED":"STATUS: VALIDATION FAILED";$("runFeedback").innerHTML=validated?"✓ LiHa channels, tip rack presence, volume limits, positions, and loop structure passed.":"<b>Resolve these issues:</b><br>"+errors.map(x=>"• "+x).join("<br>");$("log").innerHTML="METHOD VALIDATION<br>"+(validated?"VALIDATION PASSED":errors.map(x=>"ERROR: "+x).join("<br>"));$("run").disabled=!validated;$("stepRun").disabled=!validated;log(validated?"METHOD READY":"VALIDATION ERRORS FOUND")
+ const findings=[],items=getLabwareItems(),mounted={},stack=[];
+ const add=(severity,command,message)=>findings.push({severity,command,message});
+ const hasLabwareCommands=method.some(c=>["Get DiTi","Aspirate","Dispense","Mix"].includes(c.name));
+ if(!method.length)add("error",null,"The script is empty. Add at least one command.");
+ if(hasLabwareCommands&&!deck.some(Boolean))add("error",null,"The method uses labware or disposable tips, but the worktable has no carriers.");
+ method.forEach((c,i)=>{
+  const n=i+1,p=c.params||{},ch=selectedChannels(p);
+  if(c.name==="Begin Loop"){
+   stack.push(i);
+   if(!String(p.loopName||"").trim())add("error",n,"Enter a name for this loop.");
+   const cycles=Number(p.cycles);
+   if(!Number.isInteger(cycles)||cycles<1)add("error",n,"Loop cycles must be a positive whole number.");
+  }
+  if(c.name==="End Loop"){
+   if(!stack.length)add("error",n,"This End Loop has no matching Begin Loop.");
+   else stack.pop();
+  }
+  if(["Get DiTi","Drop DiTi","Aspirate","Dispense","Mix"].includes(c.name)&&!ch.length)
+   add("error",n,"Select at least one LiHa channel.");
+
+  if(c.name==="Get DiTi"){
+   const rack=items.find(x=>x.name===p.tips);
+   if(!rack)add("error",n,"Select a tip rack that is placed on the worktable.");
+   ch.forEach(channel=>{
+    if(mounted[channel])add("error",n,"Channel "+channel+" already has a mounted tip. Drop the existing tip before acquiring another.");
+    else if(rack)mounted[channel]=p.tips;
+   });
+  }
+
+  if(["Aspirate","Dispense","Mix"].includes(c.name)){
+   ch.forEach(channel=>{if(!mounted[channel])add("error",n,"Channel "+channel+" has no mounted tip. Add a Get DiTi command before this operation.")});
+   const key=c.name==="Aspirate"?"source":c.name==="Dispense"?"destination":"target";
+   const item=items.find(x=>x.label===p[key]);
+   if(!item)add("error",n,"Choose valid worktable labware for the "+(c.name==="Aspirate"?"source":c.name==="Dispense"?"destination":"mixing target")+".");
+   else{
+    const wells=Array.isArray(p.wells)?p.wells:[];
+    const L=wellLayout(item);
+    if(wells.length!==ch.length)add("error",n,"Select exactly "+ch.length+" labware position"+(ch.length===1?"":"s")+" for the selected channels.");
+    if(new Set(wells).size!==wells.length)add("error",n,"The same labware position is selected more than once.");
+    const cols=new Set(wells.map(w=>L.kind==="plate"?Number(String(w).match(/\\d+$/)?.[0]):1));
+    if(cols.size>1)add("error",n,"Selected positions must be in one column for this eight-channel selection.");
+   }
+   const volume=Number(p.volume);
+   if(!Number.isFinite(volume)||volume<=0)add("error",n,"Enter a positive pipetting volume.");
+   ch.forEach(channel=>{
+    const tip=mounted[channel],min=tip==="DiTi 1000µL LiHa"?10:tip==="DiTi 200µL LiHa"?2:null,max=tip==="DiTi 1000µL LiHa"?1000:tip==="DiTi 200µL LiHa"?200:null;
+    if(min!==null&&Number.isFinite(volume)&&volume>0&&(volume<min||volume>max))
+     add("error",n,volume+" µL is outside the configured "+tip+" range for channel "+channel+" ("+min+"–"+max+" µL).");
+   });
+   if(c.name!=="Mix"&&!["Water","Glycerol","Ethanol"].includes(p.liquidClass))
+    add("error",n,"Choose a liquid class from the simulator's available liquid classes.");
+   if(c.name==="Mix"&&(!Number.isInteger(Number(p.cycles))||Number(p.cycles)<1))
+    add("error",n,"Mix cycles must be a positive whole number.");
+   const lo=p.loopOptions;
+   if(lo?.enabled){
+    if(!stack.length)add("error",n,"Loop Options are enabled, but this command is not inside a Begin Loop / End Loop block.");
+    const scope=lo[key]||{};
+    const enabled=Object.entries(scope).filter(([,v])=>v?.enabled);
+    if(!enabled.length)add("error",n,"Choose at least one loop dimension or turn off Loop Options.");
+    enabled.forEach(([dimension,settings])=>{
+     if(!["column","row","well","labware"].includes(dimension))add("error",n,"The selected loop dimension is not supported.");
+     if(!Number.isInteger(Number(settings.step))||Number(settings.step)<1)add("error",n,"The "+dimension+" loop increment must be a positive whole number.");
+    });
+   }
+  }
+
+  if(c.name==="Drop DiTi")ch.forEach(channel=>{
+   if(!mounted[channel])add("error",n,"Channel "+channel+" has no mounted tip to drop.");
+   else delete mounted[channel];
+  });
+
+  if(c.name==="Start Timer"){
+   const seconds=Number(p.seconds);
+   if(!Number.isFinite(seconds)||seconds<0)add("error",n,"Timer length must be zero or a positive number of seconds.");
+  }
+  if(c.name==="Wait for Timer"&&!String(p.timer||"").trim())
+   add("error",n,"Specify the timer this command should wait for.");
+  if(c.name==="Set Variable"){
+   if(!/^[A-Za-z_][A-Za-z0-9_]*$/.test(String(p.name||"").trim()))add("error",n,"Enter a valid variable name (letters, numbers, and underscores; it cannot start with a number).");
+   if(p.value===""||!Number.isFinite(Number(p.value)))add("error",n,"Enter a numeric value for this variable.");
+  }
+  if(c.name==="If – Then"&&!String(p.condition||"").trim())
+   add("error",n,"Enter a condition for the If–Then command.");
+  if(c.name==="User Prompt"&&!String(p.message||"").trim())
+   add("error",n,"Enter the message students should see.");
+ });
+ stack.forEach(i=>add("error",i+1,"This Begin Loop is missing its matching End Loop."));
+ Object.keys(mounted).forEach(channel=>add("warning",null,"Channel "+channel+" still has a mounted tip at the end of the method. Confirm that leaving it mounted is intentional."));
+ add("info",null,"Checked "+method.length+" command"+(method.length===1?"":"s")+", "+items.length+" worktable labware item"+(items.length===1?"":"s")+", and loop structure.");
+
+ const errors=findings.filter(x=>x.severity==="error"),warnings=findings.filter(x=>x.severity==="warning"),infos=findings.filter(x=>x.severity==="info");
+ validated=errors.length===0;
+ $("validationState").textContent=validated?"Validation passed":"Validation failed";
+ $("validationSummary").innerHTML="";
+ [[errors.length,"Errors","error"],[warnings.length,"Warnings","warning"],[infos.length,"Information","info"]].forEach(([count,label,kind])=>{
+  const badge=document.createElement("span");badge.className="validation-count";badge.textContent=count+" "+label;
+  if(kind==="error"&&count)badge.style.borderColor="#d7a19c";
+  if(kind==="warning"&&count)badge.style.borderColor="#dfc477";
+  $("validationSummary").append(badge);
+ });
+ const list=$("validationResults");list.innerHTML="";
+ if(!findings.length){const empty=document.createElement("div");empty.className="validation-empty";empty.textContent="No findings.";list.append(empty)}
+ findings.forEach(f=>{
+  const row=document.createElement("div");row.className="validation-item";
+  const sev=document.createElement("span");sev.className="validation-severity "+f.severity;sev.textContent=f.severity;
+  const msg=document.createElement("span");msg.textContent=(f.command?"Command "+f.command+": ":"")+f.message;
+  row.append(sev,msg);list.append(row);
+ });
+ $("status").textContent=validated?"STATUS: VALIDATION PASSED":"STATUS: VALIDATION FAILED";
+ $("runFeedback").textContent=validated?"Validation passed. Review any warnings before running.":errors.length+" validation error"+(errors.length===1?"":"s")+" must be resolved before running.";
+ $("log").textContent="METHOD VALIDATION\n"+findings.map(f=>f.severity.toUpperCase()+": "+(f.command?"COMMAND "+f.command+": ":"")+f.message).join("\n");
+ $("run").disabled=!validated;$("stepRun").disabled=!validated;
+ log(validated?"METHOD READY":"VALIDATION ERRORS FOUND");
 }
 function prepareRun(){runSteps=["Initialize method","Check carrier and labware positions",...method.map((c,i)=>`Execute command ${i+1}: ${c.name}`),"Method complete"];runIndex=0;$("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent="STATUS: READY TO RUN";$("stepRun").disabled=false}
 function nextStep(){if(!validated)return;if(runIndex>=runSteps.length){$("stepRun").disabled=true;return}let s=runSteps[runIndex++];log(s.toUpperCase());$("runFeedback").textContent=s;$("progress").style.width=(runIndex/runSteps.length*100)+"%";$("percent").textContent=Math.round(runIndex/runSteps.length*100)+"%";$("status").textContent=runIndex===runSteps.length?"STATUS: SIMULATION COMPLETE":"STATUS: RUNNING";if(runIndex===runSteps.length)$("stepRun").disabled=true}
