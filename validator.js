@@ -37,6 +37,19 @@
     return { rows: 1, cols: 1, kind: "single" };
   }
 
+  function validWellPositions(item) {
+    const layout = wellLayout(item);
+    if (layout.kind === "plate") {
+      return Array.from({ length: layout.rows }, (_, row) =>
+        Array.from({ length: layout.cols }, (_, col) => String.fromCharCode(65 + row) + (col + 1))
+      ).flat();
+    }
+    if (layout.kind === "trough" || layout.kind === "tubes") {
+      return Array.from({ length: layout.rows }, (_, index) => String(index + 1));
+    }
+    return [item.label];
+  }
+
   function isSiteCompatible(item, carrierTypes) {
     const definition = carrierTypes && carrierTypes[item.carrier];
     if (!definition) return false;
@@ -98,6 +111,9 @@
       const invalidChannels = channels.filter(channel => !Number.isInteger(channel) || channel < 1 || channel > 8);
       if (invalidChannels.length) {
         add("error", n, "LiHa channel numbers must be whole numbers from 1 to 8.");
+      }
+      if (new Set(channels).size !== channels.length) {
+        add("error", n, "A LiHa channel is selected more than once. Select each channel only once.");
       }
 
       if (c.name === "Begin Loop") {
@@ -178,6 +194,11 @@
         } else {
           const wells = Array.isArray(p.wells) ? p.wells : [];
           const layout = wellLayout(item);
+          const knownPositions = new Set(validWellPositions(item));
+          const invalidWells = wells.filter(well => !knownPositions.has(String(well)));
+          if (invalidWells.length) {
+            add("error", n, "The selected position" + (invalidWells.length === 1 ? " " : "s ") + invalidWells.join(", ") + " do not exist on " + item.label + ".");
+          }
           if (wells.length !== channels.length) {
             add("error", n, "Select exactly " + channels.length + " labware position" + (channels.length === 1 ? "" : "s") + " for the selected channels.");
           }
