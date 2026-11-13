@@ -211,6 +211,19 @@
           if (columns.size > 1) {
             add("error", n, "Selected positions must be in one column for this LiHa channel selection.");
           }
+          if (wells.length === channels.length && invalidWells.length === 0 &&
+              channels.every(channel => Number.isInteger(channel) && channel >= 1 && channel <= 8)) {
+            const rowIndexes = wells.map(well =>
+              layout.kind === "plate" ? String(well).charCodeAt(0) - 65 :
+              layout.kind === "single" ? 0 : Number(well) - 1
+            );
+            const referenceRows = rowIndexes.map((row, position) => row - (channels[position] - 1));
+            const uniqueReferenceRows = new Set(referenceRows);
+            if (uniqueReferenceRows.size > 1 || referenceRows.some(row => row < 0) ||
+                referenceRows.some(row => row + Math.max(...channels.map(channel => channel - 1)) >= layout.rows)) {
+              add("error", n, "Selected positions do not match the physical spacing of the selected LiHa channels. The clicked well is the channel 1 reference, so gaps between selected channels must be preserved.");
+            }
+          }
         }
 
         const volume = Number(p.volume);
