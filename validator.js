@@ -104,6 +104,15 @@
       }
     });
 
+    // Retain rename history so commands that still reference an old name are
+    // explicitly flagged without silently rewriting their stored parameters.
+    const renamedLabels = new Map();
+    items.forEach(item => {
+      (Array.isArray(item.renamedFrom) ? item.renamedFrom : []).forEach(oldLabel => {
+        if (!renamedLabels.has(oldLabel)) renamedLabels.set(oldLabel, item);
+      });
+    });
+
     (method || []).forEach((command, index) => {
       const n = index + 1;
       const c = command || {};
@@ -190,7 +199,12 @@
         const role = c.name === "Aspirate" ? "source" : c.name === "Dispense" ? "destination" : "mixing target";
         const item = items.find(labwareItem => labwareItem.label === p[key]);
         if (!item) {
-          if (hasCarriers) {
+          const renamedItem = renamedLabels.get(p[key]);
+          if (renamedItem) {
+            add("error", n, "This command still refers to labware previously named \"" + p[key] +
+              "\". It has been renamed to \"" + renamedItem.label +
+              "\". Update the labware selection manually in this command's properties; the command was not changed automatically.");
+          } else if (hasCarriers) {
             add("error", n, "Choose valid worktable labware for the " + role + ".");
           }
         } else if (!LIQUID_LABWARE.has(item.name)) {
@@ -316,7 +330,14 @@
         } else if (!p.waste) {
           add("error", n, "Select the DiTi Waste item that this command should use.");
         } else if (!selectedWaste) {
-          add("error", n, "The selected DiTi Waste label is not on the worktable. Choose the label of an existing DiTi Waste item.");
+          const renamedWaste = renamedLabels.get(p.waste);
+          if (renamedWaste && renamedWaste.name === "DiTi Waste") {
+            add("error", n, "This Drop DiTi command still refers to the DiTi Waste container previously named \"" + p.waste +
+              "\". It has been renamed to \"" + renamedWaste.label +
+              "\". Update the waste selection manually in this command's properties; it was not changed automatically.");
+          } else {
+            add("error", n, "The selected DiTi Waste label is not on the worktable. Choose the label of an existing DiTi Waste item.");
+          }
         } else if (!isSiteCompatible(selectedWaste, carrierTypes)) {
           // The worktable position/site finding identifies the misplaced waste.
         }
