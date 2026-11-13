@@ -63,6 +63,7 @@
     const findings = [];
     const items = getLabwareItems(deck);
     const mounted = {};
+    const liquidVolumeByChannel = {};
     const stack = [];
     const diagnosedUnclosedLoops = new Set();
     const add = (severity, command, message) => findings.push({ severity, command, message });
@@ -171,7 +172,10 @@
             add("error", n, "Channel" + (alreadyMounted.length === 1 ? " " : "s ") + alreadyMounted.join(", ") + (alreadyMounted.length === 1 ? " already has" : " already have") + " a mounted tip. Drop the existing tip before acquiring another.");
           }
           channels.forEach(channel => {
-            if (!mounted[channel]) mounted[channel] = p.tips;
+            if (!mounted[channel]) {
+              mounted[channel] = p.tips;
+              liquidVolumeByChannel[channel] = 0;
+            }
           });
         }
       }
@@ -246,6 +250,36 @@
           add("error", n, volume + " µL is outside the configured " + group.tip + " range for channel" + (group.channels.length === 1 ? " " : "s ") + group.channels.join(", ") + " (" + group.min + "–" + group.max + " µL).");
         });
 
+        if (Number.isFinite(volume) && volume > 0 && c.name === "Aspirate") {
+          channels.forEach(channel => {
+            if (mounted[channel]) {
+              liquidVolumeByChannel[channel] = (liquidVolumeByChannel[channel] || 0) + volume;
+            }
+          });
+        } else if (Number.isFinite(volume) && volume > 0 && c.name === "Dispense") {
+          const overdrawn = channels
+            .filter(channel => mounted[channel] && volume > (liquidVolumeByChannel[channel] || 0) + 1e-9)
+            .map(channel => ({ channel, available: liquidVolumeByChannel[channel] || 0 }));
+          if (overdrawn.length) {
+            const groups = new Map();
+            overdrawn.forEach(entry => {
+              const key = String(entry.available);
+              if (!groups.has(key)) groups.set(key, []);
+              groups.get(key).push(entry.channel);
+            });
+            groups.forEach((groupChannels, available) => {
+              add("error", n, "Dispense volume " + volume + " µL exceeds the liquid volume aspirated on channel" +
+                (groupChannels.length === 1 ? " " : "s ") + groupChannels.join(", ") +
+                " (" + Number(available) + " µL available). Dispense no more than the volume currently held in the tip.");
+            });
+          }
+          channels.forEach(channel => {
+            if (mounted[channel] && volume <= (liquidVolumeByChannel[channel] || 0) + 1e-9) {
+              liquidVolumeByChannel[channel] = Math.max(0, (liquidVolumeByChannel[channel] || 0) - volume);
+            }
+          });
+        }
+
         if (c.name !== "Mix" && !["Water", "Glycerol", "Ethanol"].includes(p.liquidClass)) {
           add("error", n, "Choose a liquid class from the simulator's available liquid classes.");
         }
@@ -292,7 +326,10 @@
           add("error", n, "Channel" + (missingTips.length === 1 ? " " : "s ") + missingTips.join(", ") + (missingTips.length === 1 ? " has" : " have") + " no mounted tip to drop.");
         }
         channels.forEach(channel => {
-          if (mounted[channel]) delete mounted[channel];
+          if (mounted[channel]) {
+            delete mounted[channel];
+            delete liquidVolumeByChannel[channel];
+          }
         });
       }
 
