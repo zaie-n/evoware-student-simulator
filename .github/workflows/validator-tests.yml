@@ -18,9 +18,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Check validator syntax
-        run: node --check validator.js
+      - name: Check JavaScript syntax
+        run: |
+          node --check validator.js
+          node --check worktable.js
       - name: Run validator regression tests
         run: node tests/validator.test.js
+      - name: Run worktable movement tests
+        run: node tests/worktable.test.js
       - name: Check page integration and inline JavaScript
         run: node tests/page-integration.test.js
