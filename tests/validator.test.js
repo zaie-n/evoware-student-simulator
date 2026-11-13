@@ -332,6 +332,63 @@ test("labware labels must match exactly to count as duplicates", () => {
   assert.equal(hasMessage(findings, "used more than once"), false);
 });
 
+test("Aspirate, Dispense, and Mix commands flag old labware names after a rename without rewriting parameters", () => {
+  const deck = deckWithSupplies();
+  deck[0].items[0] = { ...deck[0].items[0], label: "Incoming samples", renamedFrom: ["Samples"] };
+  deck[0].items[1] = { ...deck[0].items[1], label: "Product plate", renamedFrom: ["Cleaned samples"] };
+  const method = [
+    getTips(),
+    aspirate({ source: "Samples" }),
+    dispense({ destination: "Cleaned samples" }),
+    mix({ target: "Cleaned samples" }),
+    dropTips()
+  ];
+  const findings = findingsFor(method, deck);
+  assert.equal(hasErrorAt(findings, 2), true);
+  assert.equal(hasErrorAt(findings, 3), true);
+  assert.equal(hasErrorAt(findings, 4), true);
+  assert.equal(findings.filter(item =>
+    item.message.includes("Update the labware selection manually") &&
+    item.message.includes("not changed automatically")
+  ).length, 3);
+  assert.equal(method[1].params.source, "Samples");
+  assert.equal(method[2].params.destination, "Cleaned samples");
+  assert.equal(method[3].params.target, "Cleaned samples");
+});
+
+test("Drop DiTi flags an old waste-container name after rename without rewriting the selection", () => {
+  const deck = deckWithSupplies();
+  deck[1].items[2] = {
+    ...deck[1].items[2],
+    label: "Used tip container",
+    renamedFrom: ["Tip Waste"]
+  };
+  const method = [getTips(), dropTips({ waste: "Tip Waste" })];
+  const findings = findingsFor(method, deck);
+  assert.equal(hasErrorAt(findings, 2), true);
+  assert.equal(hasMessage(findings, 'previously named "Tip Waste"'), true);
+  assert.equal(hasMessage(findings, 'renamed to "Used tip container"'), true);
+  assert.equal(method[1].params.waste, "Tip Waste");
+});
+
+test("commands validate after the user manually selects the renamed labware name", () => {
+  const deck = deckWithSupplies();
+  deck[0].items[0] = { ...deck[0].items[0], label: "Incoming samples", renamedFrom: ["Samples"] };
+  deck[0].items[1] = { ...deck[0].items[1], label: "Product plate", renamedFrom: ["Cleaned samples"] };
+  const findings = findingsFor([
+    getTips(),
+    aspirate({ source: "Incoming samples" }),
+    dispense({ destination: "Product plate" }),
+    mix({ target: "Product plate" }),
+    dropTips()
+  ], deck);
+  assert.equal(hasErrorAt(findings, 2), false);
+  assert.equal(hasErrorAt(findings, 3), false);
+  assert.equal(hasErrorAt(findings, 4), false);
+  assert.equal(findings.filter(item => item.severity === "error").length, 0,
+    JSON.stringify(errors(findings), null, 2));
+});
+
 for (const item of tests) {
   try {
     item.fn();
