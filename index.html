@@ -388,7 +388,21 @@ function showDeckInfo(){
   :"";
  if(x.site!==null&&x.site!==undefined){
   const item=c.items[x.site];
-  $("deckInfo").innerHTML="<b>Worktable position "+(x.pos+1)+" • Carrier position "+(x.site+1)+"</b> — "+(item?item.label+" ("+item.name+")":"Empty")+carrierNote+'<br><button class="btn" id="removeItem">Remove labware</button>';
+  $("deckInfo").innerHTML="<b>Worktable position "+(x.pos+1)+" • Carrier position "+(x.site+1)+"</b> — "+(item?item.label+" ("+item.name+")":"Empty")+carrierNote+
+   (item?'<br><button class="btn" id="renameItem">Rename labware</button> <button class="btn" id="removeItem">Remove labware</button>':'<br><button class="btn" id="removeItem">Remove labware</button>');
+  if(item){
+   $("renameItem").onclick=()=>{
+    const requested=prompt("Enter a new unique exact name for this labware. Any commands using its old name will be flagged and must be updated manually.",item.label);
+    if(requested===null)return;
+    const result=EvoWareWorktable.renameLabware(deck,x.pos,x.site,requested);
+    if(!result.ok){alert(result.message);return}
+    if(!result.changed)return;
+    validated=false;
+    selected=-1;
+    log('LABWARE RENAMED: "'+result.oldLabel+'" TO "'+result.newLabel+'". Associated commands were not changed automatically.');
+    renderDeck();
+   };
+  }
   $("removeItem").onclick=()=>{
    c.items[x.site]=null;validated=false;renderDeck();
    log("LABWARE REMOVED FROM WORKTABLE POSITION "+(x.pos+1)+", CARRIER POSITION "+(x.site+1));
