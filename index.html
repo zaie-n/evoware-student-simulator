@@ -191,25 +191,29 @@ function renderProperties(){
  if(c.name==="Wait for Timer")input("timer","Timer name",c.params.timer);
  $("applyParams").onclick=()=>{f.querySelectorAll("input,select").forEach(x=>{let k=x.dataset.key;if(!k)return;let v=x.value;c.params[k]=["volume","cycles","seconds","value"].includes(k)&&v!==""?Number(v):v});if(["Aspirate","Dispense","Mix","Get DiTi","Drop DiTi"].includes(c.name))c.params.channels=[...area.querySelectorAll(".channelcheck:checked")].map(x=>Number(x.value));validated=false;renderMethod()}
 }
+function cancelLabwarePlacement(message=null){
+ if(message)alert(message);
+ dragItem=null;dragMove=null;
+ $("properties").classList.remove("compact");
+ renderProperties();
+ return false;
+}
 function placeLabware(c,j,name){
  $("properties").classList.add("compact");
  if(!EvoWareWorktable.isSiteCompatible(c,j,name,carrierTypes)){
   if(name==="DiTi Waste"){
-   alert("DiTi Waste can only be placed in position 3 of a DiTi 2Pos + Waste carrier. Positions 1 and 2 are reserved for DiTi tip racks.");
-  }else{
-   alert(name+" is not compatible with position "+(j+1)+" on "+c.name+".");
+   return cancelLabwarePlacement("DiTi Waste can only be placed in position 3 of a DiTi 2Pos + Waste carrier. Positions 1 and 2 are reserved for DiTi tip racks.");
   }
-  return false;
+  return cancelLabwarePlacement(name+" is not compatible with position "+(j+1)+" on "+c.name+".");
  }
- if(c.items[j]&&!confirm("Replace labware in this position?"))return false;
+ if(c.items[j]&&!confirm("Replace labware in this position?"))return cancelLabwarePlacement();
  const label=prompt("Enter a unique exact name for this labware (used in command properties):",name);
- if(label===null)return false;
+ if(label===null)return cancelLabwarePlacement();
  const exactName=label.trim();
- if(!exactName){alert("A labware name is required.");return false}
+ if(!exactName)return cancelLabwarePlacement("A labware name is required.");
  const pos=deck.indexOf(c);
  if(!EvoWareWorktable.isLabelUnique(deck,exactName,pos,j)){
-  alert('Another labware item is already named "'+exactName+'". Each worktable item must have a unique exact name.');
-  return false;
+  return cancelLabwarePlacement('Another labware item is already named "'+exactName+'". Each worktable item must have a unique exact name.');
  }
  c.items[j]={name,label:exactName};
  selectedDeck={pos,site:j};selected=-1;
@@ -286,8 +290,8 @@ function renderDeck(){
     if(!deck[i]){alert("Place a carrier at this position first.");return}
     const free=EvoWareWorktable.findFirstCompatibleSite(deck[i],dragItem.name,carrierTypes);
     if(free<0){
-     if(dragItem.name==="DiTi Waste")alert("DiTi Waste can only be placed in position 3 of a DiTi 2Pos + Waste carrier. Positions 1 and 2 are reserved for DiTi tip racks.");
-     else alert("There is no empty compatible position for "+dragItem.name+" on this carrier.");
+     if(dragItem.name==="DiTi Waste")cancelLabwarePlacement("DiTi Waste can only be placed in position 3 of a DiTi 2Pos + Waste carrier. Positions 1 and 2 are reserved for DiTi tip racks.");
+     else cancelLabwarePlacement("There is no empty compatible position for "+dragItem.name+" on this carrier.");
      return;
     }
     placeLabware(deck[i],free,dragItem.name);
