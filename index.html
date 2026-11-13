@@ -36,6 +36,8 @@ main{padding:10px;max-width:1600px;margin:auto}
 .sitehead{font-size:11px;font-weight:700;color:#42566a;border-bottom:1px solid #c1cbd4;padding-bottom:5px;margin-bottom:6px}
 .carrier{border:2px solid #8e9ba7;background:#d4d9de;min-height:125px;padding:5px;display:flex;flex-direction:column;gap:4px}
 .carriername{text-align:center;font-size:10px;font-weight:700;color:#3d4b58;cursor:grab;user-select:none}.carriername:active{cursor:grabbing}
+.carrier.selected-carrier{outline:3px solid #d8ad18;outline-offset:3px;box-shadow:0 0 0 2px #f6e8a8}
+.labware.selected-labware{outline:3px solid #d8ad18;outline-offset:2px;box-shadow:0 0 0 2px #f6e8a8;position:relative;z-index:1}
 .labware{background:#6ca8d6;border:1px solid #477da8;color:#102f48;padding:5px 3px;text-align:center;font-size:9px;min-height:25px;cursor:grab}
 .labware.green{background:#75b89b;border-color:#47876c}.labware.yellow{background:#f0d56c;border-color:#b49a40}.labware.blue{background:#77b5df;border-color:#4c88b1}.labware.purple{background:#b9a6d5;border-color:#8b75a9}
 .dropzone{border:1px dashed #8494a2;min-height:48px;padding:9px 5px;font-size:10px;color:#536a7e;text-align:center;display:flex;align-items:center;justify-content:center;cursor:copy;transition:background .12s,outline .12s}
@@ -145,12 +147,12 @@ function selectedChannels(p){return (p.channels||[]).map(Number).sort((a,b)=>a-b
 function addChannelPicker(area,params,onChange,allowedChannels=null){const wrap=document.createElement("div"),title=document.createElement("div"),strip=document.createElement("div");title.textContent="LiHa channels";title.style.cssText="font-size:11px;font-weight:bold;margin:7px 0";strip.style.cssText="display:grid;grid-template-columns:repeat(8,minmax(30px,1fr));gap:5px";const allLabel=document.createElement("label");allLabel.style.cssText="display:flex;align-items:center;gap:6px;font-size:11px;margin:5px 0";const all=document.createElement("input");all.type="checkbox";all.checked=allowedChannels?allowedChannels.every(n=>selectedChannels(params).includes(n)):selectedChannels(params).length===8;allLabel.append(all,"Select all mounted channels");all.onchange=()=>{params.channels=all.checked?(allowedChannels?[...allowedChannels]:[1,2,3,4,5,6,7,8]):[];strip.querySelectorAll(".channelcheck").forEach(x=>{x.checked=params.channels.includes(Number(x.value))});if(onChange)onChange()};for(let n=1;n<=8;n++){let l=document.createElement("label");l.style.cssText="display:flex;justify-content:center;align-items:center;gap:3px;border:1px solid #bdc8d2;padding:6px 1px;font-size:11px";let cb=document.createElement("input");cb.type="checkbox";cb.className="channelcheck";cb.value=n;cb.checked=selectedChannels(params).includes(n);cb.disabled=!!allowedChannels&&!allowedChannels.includes(n);cb.onchange=()=>{params.channels=[...strip.querySelectorAll(".channelcheck:checked")].map(x=>Number(x.value));all.checked=allowedChannels?allowedChannels.every(n=>params.channels.includes(n)):params.channels.length===8;if(onChange)onChange()};l.append(cb,String(n));strip.append(l)}wrap.append(title,allLabel,strip);area.append(wrap);return strip;}
 
 function renderLibrary(tab){let el=$("library");el.innerHTML="";(categories[tab]||[]).forEach(([cat,items])=>{let h=document.createElement("div");h.className="cat";h.textContent=cat;el.append(h);items.forEach(name=>{let b=document.createElement("div");b.className="libitem";b.draggable=true;b.innerHTML=`<span class="glyph">${icons[name]||"▦"}</span><span>${name}</span>`;b.addEventListener("dragstart",e=>{dragMove=null;dragItem={name,kind:tab==="Carriers"?"carrier":tab==="Labware"?"labware":tab==="Commands"?"command":"reference"};if(dragItem.kind==="carrier"||dragItem.kind==="labware"){$("properties").classList.add("compact");$("properties").innerHTML='<div style="font-size:11px;color:#526476"><b>Worktable placement</b> — Drop '+name+' onto the worktable to place it.</div>'}e.dataTransfer.setData("text/plain",name)});b.addEventListener("click",()=>{dragMove=null;dragItem={name,kind:tab==="Carriers"?"carrier":tab==="Labware"?"labware":tab==="Commands"?"command":"reference"};if(dragItem.kind==="command")addCommand(name);else if(dragItem.kind==="carrier"||dragItem.kind==="labware"){$("properties").classList.add("compact");$("properties").innerHTML='<div style="font-size:11px;color:#526476"><b>Worktable placement</b> — '+name+' selected. Drag it onto the worktable.</div>';$ ("deckInfo").textContent=`Selected ${name}. Drag it onto the worktable${dragItem.kind==="labware"?" and choose a carrier site":" position"}.`;}else $("deckInfo").textContent=`Liquid class selected: ${name}. Set this in the command properties.`});el.append(b)})})}
-function addCommand(name,index=method.length){selectedDeck=null;let item={name,params:{...(defaults[name]||{})},id:Math.random().toString(36).slice(2)};method.splice(Math.max(0,Math.min(index,method.length)),0,item);selected=method.findIndex(x=>x.id===item.id);validated=false;renderMethod()}
+function addCommand(name,index=method.length){selectedDeck=null;updateDeckSelectionHighlight();let item={name,params:{...(defaults[name]||{})},id:Math.random().toString(36).slice(2)};method.splice(Math.max(0,Math.min(index,method.length)),0,item);selected=method.findIndex(x=>x.id===item.id);validated=false;renderMethod()}
 function renderMethod(){
  let s=$("script");s.innerHTML="";if(!method.length)s.innerHTML='<div class="empty">Drag commands here to build your method.</div>';
  method.forEach((c,i)=>{let row=document.createElement("div");row.className="command"+(i===selected?" selected":"");row.draggable=true;
  row.innerHTML=`<span class="n">${String(i+1).padStart(2,"0")}</span><b>${icons[c.name]||"▣"}</b><span class="detail"><b>${c.name}</b><small>${Object.entries(c.params).filter(([k])=>k!=="loopOptions").map(([k,v])=>k+": "+(Array.isArray(v)?v.join(","):v)).join(" • ")||"No parameters"}</small></span><button title="Remove">✕</button>`;
- row.onclick=e=>{if(e.target.tagName==="BUTTON"){method.splice(i,1);selected=-1;selectedDeck=null;validated=false;renderMethod()}else{selectedDeck=null;selected=i;renderMethod()}};
+ row.onclick=e=>{if(e.target.tagName==="BUTTON"){method.splice(i,1);selected=-1;selectedDeck=null;updateDeckSelectionHighlight();validated=false;renderMethod()}else{selectedDeck=null;updateDeckSelectionHighlight();selected=i;renderMethod()}};
  row.ondragstart=e=>{dragCommandId=c.id;dragItem=null;e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",c.id)};
  row.ondragover=e=>{if(!dragCommandId&&dragItem?.kind!=="command")return;e.preventDefault();let r=row.getBoundingClientRect();dropIndex=i;dropAfter=e.clientY>r.top+r.height/2;document.querySelectorAll(".command").forEach(x=>x.classList.remove("drop-before","drop-after"));row.classList.toggle("drop-before",!dropAfter);row.classList.toggle("drop-after",dropAfter)};
  row.ondragleave=()=>row.classList.remove("drop-before","drop-after");
@@ -256,6 +258,18 @@ function moveCarrierOnDeck(fromPos,toPos){
  dragMove=null;dragItem=null;renderDeck();
  return true;
 }
+function updateDeckSelectionHighlight(){
+ document.querySelectorAll("#deck .carrier").forEach(el=>{
+  const pos=Number(el.dataset.deckPos);
+  const chosen=selectedDeck&&selectedDeck.pos===pos&&(selectedDeck.site===null||selectedDeck.site===undefined);
+  el.classList.toggle("selected-carrier",!!chosen);
+ });
+ document.querySelectorAll("#deck .labware").forEach(el=>{
+  const pos=Number(el.dataset.deckPos),site=Number(el.dataset.carrierSite);
+  const chosen=selectedDeck&&selectedDeck.pos===pos&&selectedDeck.site===site;
+  el.classList.toggle("selected-labware",!!chosen);
+ });
+}
 function renderDeck(){
  const d=$("deck");d.innerHTML="";
  deck.forEach((c,i)=>{
@@ -299,7 +313,7 @@ function renderDeck(){
   });
   site.addEventListener("click",()=>{selectedDeck={pos:i,site:null};selected=-1;showDeckInfo()});
   if(c){
-   const carrier=document.createElement("div");carrier.className="carrier";
+   const carrier=document.createElement("div");carrier.className="carrier";carrier.dataset.deckPos=i;
    carrier.addEventListener("dragover",e=>{
     if(dragMove?.kind==="carrier"||dragMove?.kind==="labware"||dragItem?.kind==="labware"){e.preventDefault();carrier.classList.add("over")}
    });
@@ -352,7 +366,7 @@ function renderDeck(){
      }
     });
     if(item){
-     z.className="labware "+(colors[item.name]||"blue");
+     z.className="labware "+(colors[item.name]||"blue");z.dataset.deckPos=i;z.dataset.carrierSite=j;
      z.textContent=item.label;z.draggable=true;
      z.title=item.name+" — drag to move; click to inspect";
      z.addEventListener("dragstart",e=>{
@@ -379,6 +393,7 @@ function renderDeck(){
  showDeckInfo();
 }
 function showDeckInfo(){
+ updateDeckSelectionHighlight();
  const x=selectedDeck;
  if(!x){$("deckInfo").textContent="No worktable item selected.";renderProperties();return}
  const c=deck[x.pos];
@@ -439,7 +454,7 @@ function validate(){
   row.append(sev,msg);
   if(f.command){
    row.tabIndex=0;row.setAttribute("role","button");row.title="Select command "+f.command+" in the Script Editor";
-   const go=()=>{selected=f.command-1;renderMethod();const target=$("script").querySelector(".command.selected");if(target)target.scrollIntoView({block:"nearest",behavior:"smooth"})};
+   const go=()=>{selectedDeck=null;updateDeckSelectionHighlight();selected=f.command-1;renderMethod();const target=$("script").querySelector(".command.selected");if(target)target.scrollIntoView({block:"nearest",behavior:"smooth"})};
    row.addEventListener("click",go);row.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}});
   }
   list.append(row);
