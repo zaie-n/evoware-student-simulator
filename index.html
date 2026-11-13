@@ -35,7 +35,7 @@ main{padding:10px;max-width:1600px;margin:auto}
 .site{background:#eef2f5;border:2px solid #929faa;min-height:170px;padding:6px;position:relative}
 .sitehead{font-size:11px;font-weight:700;color:#42566a;border-bottom:1px solid #c1cbd4;padding-bottom:5px;margin-bottom:6px}
 .carrier{border:2px solid #8e9ba7;background:#d4d9de;min-height:125px;padding:5px;display:flex;flex-direction:column;gap:4px}
-.carriername{text-align:center;font-size:10px;font-weight:700;color:#3d4b58}
+.carriername{text-align:center;font-size:10px;font-weight:700;color:#3d4b58;cursor:grab;user-select:none}.carriername:active{cursor:grabbing}
 .labware{background:#6ca8d6;border:1px solid #477da8;color:#102f48;padding:5px 3px;text-align:center;font-size:9px;min-height:25px;cursor:grab}
 .labware.green{background:#75b89b;border-color:#47876c}.labware.yellow{background:#f0d56c;border-color:#b49a40}.labware.blue{background:#77b5df;border-color:#4c88b1}.labware.purple{background:#b9a6d5;border-color:#8b75a9}
 .dropzone{border:1px dashed #8494a2;min-height:48px;padding:9px 5px;font-size:10px;color:#536a7e;text-align:center;display:flex;align-items:center;justify-content:center;cursor:copy;transition:background .12s,outline .12s}
@@ -92,7 +92,7 @@ main{padding:10px;max-width:1600px;margin:auto}
 <section class="panel workpanel">
  <div class="phead">Worktable Editor</div>
  <div class="workbody">
-  <p class="decknote"><b>Worktable setup:</b> Each numbered grey outline represents a carrier position. Labware sits <b>on top of</b> its carrier. A carrier may contain multiple sites for labware. Build the deck by placing the carrier first, then its compatible labware.</p>
+  <p class="decknote"><b>Worktable setup:</b> Each numbered grey outline represents a carrier position. Drag a labware item to another compatible site to move it; dropping on an occupied compatible site swaps the items. Drag a carrier by its header to move it; dropping on an occupied deck position swaps carriers while keeping all their labware together.</p>
   <div class="deckscroll"><div class="deck" id="deck"></div></div>
   <div id="deckInfo" class="hint">No worktable item selected.</div>
  </div>
@@ -115,6 +115,7 @@ main{padding:10px;max-width:1600px;margin:auto}
 </main>
 <div class="modalback" id="modalBack"><div class="modal"><h3 id="modalTitle">Configure item</h3><div id="modalBody"></div><div class="actions"><button class="btn" id="cancelModal">Cancel</button><button class="btn primary" id="confirmModal">Place item</button></div></div></div>
 <script src="validator.js"></script>
+<script src="worktable.js"></script>
 <script>
 (()=>{
 const $=id=>document.getElementById(id);
@@ -134,7 +135,7 @@ const carrierTypes={
 const colors={"96 Well Microplate":"blue","96 Well Microplate - MagPlat":"blue","DiTi 1000µL LiHa":"yellow","DiTi 200µL LiHa":"yellow","DiTi Waste":"green","Trough 100ml":"green","1.5mL tube":"purple","0.2mL tube":"purple"};
 const icons={"Aspirate":"↑","Dispense":"↓","Mix":"↻","Get DiTi":"▤","Drop DiTi":"▧","Begin Loop":"↻","End Loop":"↘","Set Variable":"ƒ","If – Then":"◇","User Prompt":"▣","Start Timer":"◷","Wait for Timer":"◴"};
 const defaults={"Get DiTi":{tips:"DiTi 200µL LiHa",channels:[1,2,3,4,5,6,7,8]},"Drop DiTi":{channels:[1,2,3,4,5,6,7,8],waste:""},"Aspirate":{source:"",volume:23,liquidClass:"Water",channels:[1,2,3,4,5,6,7,8],wells:[]},"Dispense":{destination:"",volume:23,liquidClass:"Water",channels:[1,2,3,4,5,6,7,8],wells:[]},"Mix":{volume:100,cycles:3},"Begin Loop":{loopName:"",cycles:8},"End Loop":{loopName:""},"Set Variable":{name:"sample_count",value:16},"If – Then":{condition:"sample_count > 0"},"User Prompt":{message:"Check reagent reservoirs"},"Start Timer":{seconds:30},"Wait for Timer":{timer:"mix_timer"}};
-let method=[],selected=-1,deck=Array.from({length:10},()=>null),selectedDeck=null,validated=false,runIndex=0,runSteps=[],dragItem=null,dragCommandId=null,dropIndex=null,dropAfter=false;
+let method=[],selected=-1,deck=Array.from({length:10},()=>null),selectedDeck=null,validated=false,runIndex=0,runSteps=[],dragItem=null,dragMove=null,dragCommandId=null,dropIndex=null,dropAfter=false;
 function log(s){$("log").innerHTML+=`<br>${new Date().toLocaleTimeString()} ${s}`;$("log").scrollTop=$("log").scrollHeight}
 function getLabwareItems(){return deck.flatMap((c,pos)=>c?c.items.map((x,site)=>x?{...x,pos,site,carrier:c.name}:null).filter(Boolean):[])}
 function getLabwareLabels(){return getLabwareItems().map(x=>x.label)}
@@ -143,13 +144,13 @@ function mountedTipTypesBefore(index){let mounted={};for(let i=0;i<index;i++){le
 function selectedChannels(p){return (p.channels||[]).map(Number).sort((a,b)=>a-b)}
 function addChannelPicker(area,params,onChange,allowedChannels=null){const wrap=document.createElement("div"),title=document.createElement("div"),strip=document.createElement("div");title.textContent="LiHa channels";title.style.cssText="font-size:11px;font-weight:bold;margin:7px 0";strip.style.cssText="display:grid;grid-template-columns:repeat(8,minmax(30px,1fr));gap:5px";const allLabel=document.createElement("label");allLabel.style.cssText="display:flex;align-items:center;gap:6px;font-size:11px;margin:5px 0";const all=document.createElement("input");all.type="checkbox";all.checked=allowedChannels?allowedChannels.every(n=>selectedChannels(params).includes(n)):selectedChannels(params).length===8;allLabel.append(all,"Select all mounted channels");all.onchange=()=>{params.channels=all.checked?(allowedChannels?[...allowedChannels]:[1,2,3,4,5,6,7,8]):[];strip.querySelectorAll(".channelcheck").forEach(x=>{x.checked=params.channels.includes(Number(x.value))});if(onChange)onChange()};for(let n=1;n<=8;n++){let l=document.createElement("label");l.style.cssText="display:flex;justify-content:center;align-items:center;gap:3px;border:1px solid #bdc8d2;padding:6px 1px;font-size:11px";let cb=document.createElement("input");cb.type="checkbox";cb.className="channelcheck";cb.value=n;cb.checked=selectedChannels(params).includes(n);cb.disabled=!!allowedChannels&&!allowedChannels.includes(n);cb.onchange=()=>{params.channels=[...strip.querySelectorAll(".channelcheck:checked")].map(x=>Number(x.value));all.checked=allowedChannels?allowedChannels.every(n=>params.channels.includes(n)):params.channels.length===8;if(onChange)onChange()};l.append(cb,String(n));strip.append(l)}wrap.append(title,allLabel,strip);area.append(wrap);return strip;}
 
-function renderLibrary(tab){let el=$("library");el.innerHTML="";(categories[tab]||[]).forEach(([cat,items])=>{let h=document.createElement("div");h.className="cat";h.textContent=cat;el.append(h);items.forEach(name=>{let b=document.createElement("div");b.className="libitem";b.draggable=true;b.innerHTML=`<span class="glyph">${icons[name]||"▦"}</span><span>${name}</span>`;b.addEventListener("dragstart",e=>{dragItem={name,kind:tab==="Carriers"?"carrier":tab==="Labware"?"labware":tab==="Commands"?"command":"reference"};if(dragItem.kind==="carrier"||dragItem.kind==="labware"){$("properties").classList.add("compact");$("properties").innerHTML='<div style="font-size:11px;color:#526476"><b>Worktable placement</b> — Drop '+name+' onto the worktable to place it.</div>'}e.dataTransfer.setData("text/plain",name)});b.addEventListener("click",()=>{dragItem={name,kind:tab==="Carriers"?"carrier":tab==="Labware"?"labware":tab==="Commands"?"command":"reference"};if(dragItem.kind==="command")addCommand(name);else if(dragItem.kind==="carrier"||dragItem.kind==="labware"){$("properties").classList.add("compact");$("properties").innerHTML='<div style="font-size:11px;color:#526476"><b>Worktable placement</b> — '+name+' selected. Drag it onto the worktable.</div>';$ ("deckInfo").textContent=`Selected ${name}. Drag it onto the worktable${dragItem.kind==="labware"?" and choose a carrier site":" position"}.`;}else $("deckInfo").textContent=`Liquid class selected: ${name}. Set this in the command properties.`});el.append(b)})})}
-function addCommand(name,index=method.length){let item={name,params:{...(defaults[name]||{})},id:Math.random().toString(36).slice(2)};method.splice(Math.max(0,Math.min(index,method.length)),0,item);selected=method.findIndex(x=>x.id===item.id);validated=false;renderMethod()}
+function renderLibrary(tab){let el=$("library");el.innerHTML="";(categories[tab]||[]).forEach(([cat,items])=>{let h=document.createElement("div");h.className="cat";h.textContent=cat;el.append(h);items.forEach(name=>{let b=document.createElement("div");b.className="libitem";b.draggable=true;b.innerHTML=`<span class="glyph">${icons[name]||"▦"}</span><span>${name}</span>`;b.addEventListener("dragstart",e=>{dragMove=null;dragItem={name,kind:tab==="Carriers"?"carrier":tab==="Labware"?"labware":tab==="Commands"?"command":"reference"};if(dragItem.kind==="carrier"||dragItem.kind==="labware"){$("properties").classList.add("compact");$("properties").innerHTML='<div style="font-size:11px;color:#526476"><b>Worktable placement</b> — Drop '+name+' onto the worktable to place it.</div>'}e.dataTransfer.setData("text/plain",name)});b.addEventListener("click",()=>{dragMove=null;dragItem={name,kind:tab==="Carriers"?"carrier":tab==="Labware"?"labware":tab==="Commands"?"command":"reference"};if(dragItem.kind==="command")addCommand(name);else if(dragItem.kind==="carrier"||dragItem.kind==="labware"){$("properties").classList.add("compact");$("properties").innerHTML='<div style="font-size:11px;color:#526476"><b>Worktable placement</b> — '+name+' selected. Drag it onto the worktable.</div>';$ ("deckInfo").textContent=`Selected ${name}. Drag it onto the worktable${dragItem.kind==="labware"?" and choose a carrier site":" position"}.`;}else $("deckInfo").textContent=`Liquid class selected: ${name}. Set this in the command properties.`});el.append(b)})})}
+function addCommand(name,index=method.length){selectedDeck=null;let item={name,params:{...(defaults[name]||{})},id:Math.random().toString(36).slice(2)};method.splice(Math.max(0,Math.min(index,method.length)),0,item);selected=method.findIndex(x=>x.id===item.id);validated=false;renderMethod()}
 function renderMethod(){
  let s=$("script");s.innerHTML="";if(!method.length)s.innerHTML='<div class="empty">Drag commands here to build your method.</div>';
  method.forEach((c,i)=>{let row=document.createElement("div");row.className="command"+(i===selected?" selected":"");row.draggable=true;
  row.innerHTML=`<span class="n">${String(i+1).padStart(2,"0")}</span><b>${icons[c.name]||"▣"}</b><span class="detail"><b>${c.name}</b><small>${Object.entries(c.params).filter(([k])=>k!=="loopOptions").map(([k,v])=>k+": "+(Array.isArray(v)?v.join(","):v)).join(" • ")||"No parameters"}</small></span><button title="Remove">✕</button>`;
- row.onclick=e=>{if(e.target.tagName==="BUTTON"){method.splice(i,1);selected=-1;validated=false;renderMethod()}else{selected=i;renderMethod()}};
+ row.onclick=e=>{if(e.target.tagName==="BUTTON"){method.splice(i,1);selected=-1;selectedDeck=null;validated=false;renderMethod()}else{selectedDeck=null;selected=i;renderMethod()}};
  row.ondragstart=e=>{dragCommandId=c.id;dragItem=null;e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",c.id)};
  row.ondragover=e=>{if(!dragCommandId&&dragItem?.kind!=="command")return;e.preventDefault();let r=row.getBoundingClientRect();dropIndex=i;dropAfter=e.clientY>r.top+r.height/2;document.querySelectorAll(".command").forEach(x=>x.classList.remove("drop-before","drop-after"));row.classList.toggle("drop-before",!dropAfter);row.classList.toggle("drop-after",dropAfter)};
  row.ondragleave=()=>row.classList.remove("drop-before","drop-after");
@@ -158,7 +159,7 @@ function renderMethod(){
  $("commandCount").textContent=method.length+" commands";renderProperties()
 }
 function renderProperties(){
- let p=$("properties");if(dragItem&&(dragItem.kind==="carrier"||dragItem.kind==="labware")){p.classList.add("compact");return}p.classList.remove("compact");if(selected<0||!method[selected]){p.innerHTML='<span style="font-size:11px;color:#718193">Select a command to inspect and edit its parameters.</span>';return}
+ let p=$("properties");if(dragItem&&(dragItem.kind==="carrier"||dragItem.kind==="labware")){p.classList.add("compact");return}p.classList.remove("compact");const selectedCarrier=selectedDeck&&selectedDeck.site===null?deck[selectedDeck.pos]:null;if(selectedCarrier&&selectedCarrier.name==="DiTi 2Pos + Waste"){p.innerHTML='<b>DiTi 2Pos + Waste</b><p style="font-size:11px;color:#667789;line-height:1.5">The DiTi Waste container can only be placed in position 3 of this carrier. Positions 1 and 2 are reserved for DiTi tip racks.</p>';return}if(selected<0||!method[selected]){p.innerHTML='<span style="font-size:11px;color:#718193">Select a command to inspect and edit its parameters.</span>';return}
  let c=method[selected];p.innerHTML=`<b>${c.name}</b><p style="font-size:11px;color:#667789">Configure the selected command.</p><div id="paramFields"></div><div id="visualPicker"></div><div id="channelError" style="color:#a33;font-size:11px"></div><button class="btn primary" id="applyParams" style="margin-top:9px">Apply parameters</button>`;
  let f=$("paramFields"),area=$("visualPicker"),items=getLabwareItems();
  const field=(key,label,el)=>{let w=document.createElement("label");w.textContent=label;w.style.cssText="display:block;margin:7px 0;font-size:11px";el.dataset.key=key;el.style.cssText+=";display:block;width:100%;padding:6px;margin-top:4px";w.append(el);f.append(w)};
@@ -190,9 +191,215 @@ function renderProperties(){
  if(c.name==="Wait for Timer")input("timer","Timer name",c.params.timer);
  $("applyParams").onclick=()=>{f.querySelectorAll("input,select").forEach(x=>{let k=x.dataset.key;if(!k)return;let v=x.value;c.params[k]=["volume","cycles","seconds","value"].includes(k)&&v!==""?Number(v):v});if(["Aspirate","Dispense","Mix","Get DiTi","Drop DiTi"].includes(c.name))c.params.channels=[...area.querySelectorAll(".channelcheck:checked")].map(x=>Number(x.value));validated=false;renderMethod()}
 }
-function placeLabware(c,j,name){$("properties").classList.add("compact");if(!carrierTypes[c.name].compatible.includes(name)){alert("This labware is not compatible with this carrier.");return}if(c.items[j]&&!confirm("Replace labware in this site?"))return;let defaultLabel=name;let label=prompt("Enter a label for this labware (this label will appear in source/destination dropdowns):",defaultLabel);if(label===null)return;if(!label.trim()){alert("A labware label is required.");return}c.items[j]={name,label:label.trim()};selectedDeck={pos:deck.indexOf(c),site:j};log(`LABWARE PLACED: ${label.trim()} (${name}) ON ${c.name}`);dragItem=null;validated=false;renderDeck()}
-function renderDeck(){let d=$("deck");d.innerHTML="";deck.forEach((c,i)=>{let site=document.createElement("div");site.className="site";site.dataset.pos=i+1;site.innerHTML=`<div class="sitehead">Position ${i+1}</div>`;site.addEventListener("dragover",e=>{e.preventDefault();site.classList.add("over")});site.addEventListener("dragleave",()=>site.classList.remove("over"));site.addEventListener("drop",e=>{e.preventDefault();site.classList.remove("over");if(!dragItem)return;if(dragItem.kind==="carrier"){if(deck[i]){alert("This position already has a carrier. Remove it before replacing it.");return}deck[i]={name:dragItem.name,items:Array(carrierTypes[dragItem.name].sites).fill(null)};selectedDeck={pos:i,site:null};log(`CARRIER PLACED: ${dragItem.name} AT POSITION ${i+1}`);dragItem=null;validated=false;$("properties").classList.add("compact");renderDeck()}else if(dragItem.kind==="labware"){if(!deck[i]){alert("Place a carrier at this position first.");return}let free=deck[i].items.findIndex(x=>x===null);if(free<0){alert("All sites on this carrier are occupied.");return}placeLabware(deck[i],free,dragItem.name)}});site.addEventListener("click",()=>{selectedDeck={pos:i,site:null};showDeckInfo()});if(c){let carrier=document.createElement("div");carrier.className="carrier";let title=document.createElement("div");title.className="carriername";title.textContent=c.name;carrier.append(title);c.items.forEach((item,j)=>{let z=document.createElement("div");z.className="dropzone";z.textContent=item?`${item.label} (${item.name})`:`Site ${j+1} — drop labware here`;z.addEventListener("dragover",e=>{e.preventDefault();z.classList.add("over")});z.addEventListener("dragleave",()=>z.classList.remove("over"));z.addEventListener("drop",e=>{e.preventDefault();e.stopPropagation();z.classList.remove("over");if(dragItem?.kind==="labware")placeLabware(c,j,dragItem.name)});if(item){z.className="labware "+(colors[item.name]||"blue");z.textContent=item.label;z.title=`${item.name} — click to inspect/remove`;z.onclick=e=>{e.stopPropagation();selectedDeck={pos:i,site:j};showDeckInfo()}}carrier.append(z)});site.append(carrier)}else{let empty=document.createElement("div");empty.style.cssText="font-size:10px;color:#8a98a5;padding:28px 2px;text-align:center";empty.textContent="Empty carrier position";site.append(empty)}d.append(site)});showDeckInfo()}
-function showDeckInfo(){let x=selectedDeck;if(!x){$("deckInfo").textContent="No worktable item selected.";return}let c=deck[x.pos];if(!c){$("deckInfo").textContent=`Position ${x.pos+1} is empty. Place a carrier here first.`;return}if(x.site!==null&&x.site!==undefined){let item=c.items[x.site];$("deckInfo").innerHTML=`<b>Position ${x.pos+1} • Site ${x.site+1}</b> — ${item?`${item.label} (${item.name})`:"Empty"}<br><button class="btn" id="removeItem">Remove labware</button>`;$("removeItem").onclick=()=>{c.items[x.site]=null;validated=false;renderDeck();log(`LABWARE REMOVED FROM POSITION ${x.pos+1}, SITE ${x.site+1}`)}}else{$("deckInfo").innerHTML=`<b>Position ${x.pos+1}</b> — Carrier: ${c.name}<br>${c.items.filter(Boolean).length} / ${c.items.length} labware sites occupied. <button class="btn" id="removeCarrier">Remove carrier and its labware</button>`;$("removeCarrier").onclick=()=>{if(confirm("Remove this carrier and all labware on it?")){deck[x.pos]=null;validated=false;renderDeck();log(`CARRIER REMOVED FROM POSITION ${x.pos+1}`)}}}}
+function placeLabware(c,j,name){
+ $("properties").classList.add("compact");
+ if(!EvoWareWorktable.isSiteCompatible(c,j,name,carrierTypes)){
+  if(name==="DiTi Waste"){
+   alert("DiTi Waste can only be placed in position 3 of a DiTi 2Pos + Waste carrier. Positions 1 and 2 are reserved for DiTi tip racks.");
+  }else{
+   alert(name+" is not compatible with position "+(j+1)+" on "+c.name+".");
+  }
+  return false;
+ }
+ if(c.items[j]&&!confirm("Replace labware in this position?"))return false;
+ const label=prompt("Enter a unique exact name for this labware (used in command properties):",name);
+ if(label===null)return false;
+ const exactName=label.trim();
+ if(!exactName){alert("A labware name is required.");return false}
+ const pos=deck.indexOf(c);
+ if(!EvoWareWorktable.isLabelUnique(deck,exactName,pos,j)){
+  alert('Another labware item is already named "'+exactName+'". Each worktable item must have a unique exact name.');
+  return false;
+ }
+ c.items[j]={name,label:exactName};
+ selectedDeck={pos,site:j};selected=-1;
+ log("LABWARE PLACED: "+exactName+" ("+name+") ON "+c.name+", POSITION "+(j+1));
+ dragItem=null;dragMove=null;validated=false;renderDeck();
+ return true;
+}
+function moveLabwareOnDeck(fromPos,fromSite,toPos,toSite){
+ const result=EvoWareWorktable.moveLabware(deck,fromPos,fromSite,toPos,toSite,carrierTypes);
+ if(!result.ok){alert(result.message);return false}
+ if(!result.changed)return true;
+ selectedDeck={pos:toPos,site:toSite};selected=-1;
+ validated=false;
+ if(result.swapped){
+  log("LABWARE SWAPPED: "+result.item.label+" AND "+result.displaced.label+" BETWEEN CARRIER POSITIONS");
+ }else{
+  log("LABWARE MOVED: "+result.item.label+" TO "+deck[toPos].name+", POSITION "+(toSite+1));
+ }
+ dragMove=null;dragItem=null;renderDeck();
+ return true;
+}
+function moveLabwareToCarrier(fromPos,fromSite,toPos){
+ const carrier=deck[toPos];
+ if(!carrier){alert("Choose a worktable position that contains a carrier.");return false}
+ const sourceItem=deck[fromPos]?.items[fromSite];
+ if(!sourceItem)return false;
+ const freeSite=EvoWareWorktable.findFirstCompatibleSite(carrier,sourceItem.name,carrierTypes);
+ if(freeSite<0){alert("There is no empty compatible position for "+sourceItem.name+" on "+carrier.name+".");return false}
+ return moveLabwareOnDeck(fromPos,fromSite,toPos,freeSite);
+}
+function moveCarrierOnDeck(fromPos,toPos){
+ const result=EvoWareWorktable.moveCarrier(deck,fromPos,toPos);
+ if(!result.ok){alert(result.message);return false}
+ if(!result.changed)return true;
+ selectedDeck={pos:toPos,site:null};selected=-1;
+ validated=false;
+ log(result.swapped
+  ?"CARRIERS SWAPPED: WORKTABLE POSITIONS "+(fromPos+1)+" AND "+(toPos+1)+"; ALL LABWARE STAYED WITH ITS CARRIER"
+  :"CARRIER MOVED: "+result.carrier.name+" FROM WORKTABLE POSITION "+(fromPos+1)+" TO "+(toPos+1)+"; ALL LABWARE RETAINED");
+ dragMove=null;dragItem=null;renderDeck();
+ return true;
+}
+function renderDeck(){
+ const d=$("deck");d.innerHTML="";
+ deck.forEach((c,i)=>{
+  const site=document.createElement("div");
+  site.className="site";site.dataset.pos=i+1;
+  site.innerHTML='<div class="sitehead">Position '+(i+1)+'</div>';
+  site.addEventListener("dragover",e=>{
+   if(dragMove?.kind==="carrier"||dragMove?.kind==="labware"||dragItem?.kind==="carrier"||dragItem?.kind==="labware"){
+    e.preventDefault();site.classList.add("over");
+   }
+  });
+  site.addEventListener("dragleave",()=>site.classList.remove("over"));
+  site.addEventListener("drop",e=>{
+   e.preventDefault();site.classList.remove("over");
+   if(dragMove?.kind==="carrier"){
+    moveCarrierOnDeck(dragMove.fromPos,i);
+    return;
+   }
+   if(dragMove?.kind==="labware"){
+    if(!deck[i]){alert("Move labware onto a carrier, not an empty worktable position.");return}
+    moveLabwareToCarrier(dragMove.fromPos,dragMove.fromSite,i);
+    return;
+   }
+   if(!dragItem)return;
+   if(dragItem.kind==="carrier"){
+    if(deck[i]){alert("This position already has a carrier. Drag an existing carrier by its header to move or swap it.");return}
+    deck[i]={name:dragItem.name,items:Array(carrierTypes[dragItem.name].sites).fill(null)};
+    selectedDeck={pos:i,site:null};selected=-1;
+    log("CARRIER PLACED: "+dragItem.name+" AT WORKTABLE POSITION "+(i+1));
+    dragItem=null;validated=false;$("properties").classList.add("compact");renderDeck();
+   }else if(dragItem.kind==="labware"){
+    if(!deck[i]){alert("Place a carrier at this position first.");return}
+    const free=EvoWareWorktable.findFirstCompatibleSite(deck[i],dragItem.name,carrierTypes);
+    if(free<0){
+     if(dragItem.name==="DiTi Waste")alert("DiTi Waste can only be placed in position 3 of a DiTi 2Pos + Waste carrier. Positions 1 and 2 are reserved for DiTi tip racks.");
+     else alert("There is no empty compatible position for "+dragItem.name+" on this carrier.");
+     return;
+    }
+    placeLabware(deck[i],free,dragItem.name);
+   }
+  });
+  site.addEventListener("click",()=>{selectedDeck={pos:i,site:null};selected=-1;showDeckInfo()});
+  if(c){
+   const carrier=document.createElement("div");carrier.className="carrier";
+   carrier.addEventListener("dragover",e=>{
+    if(dragMove?.kind==="carrier"||dragMove?.kind==="labware"||dragItem?.kind==="labware"){e.preventDefault();carrier.classList.add("over")}
+   });
+   carrier.addEventListener("dragleave",()=>carrier.classList.remove("over"));
+   carrier.addEventListener("drop",e=>{
+    if(dragMove?.kind==="carrier"){
+     e.preventDefault();e.stopPropagation();moveCarrierOnDeck(dragMove.fromPos,i);
+    }else if(dragMove?.kind==="labware"){
+     e.preventDefault();e.stopPropagation();moveLabwareToCarrier(dragMove.fromPos,dragMove.fromSite,i);
+    }else if(dragItem?.kind==="labware"){
+     e.preventDefault();e.stopPropagation();
+     const free=EvoWareWorktable.findFirstCompatibleSite(c,dragItem.name,carrierTypes);
+     if(free<0){
+      if(dragItem.name==="DiTi Waste")alert("DiTi Waste can only be placed in position 3 of a DiTi 2Pos + Waste carrier. Positions 1 and 2 are reserved for DiTi tip racks.");
+      else alert("There is no empty compatible position for "+dragItem.name+" on this carrier.");
+      return;
+     }
+     placeLabware(c,free,dragItem.name);
+    }
+   });
+   const title=document.createElement("div");
+   title.className="carriername";title.textContent=c.name;title.draggable=true;
+   title.title="Drag this carrier header to move the carrier with all of its labware";
+   title.addEventListener("dragstart",e=>{
+    dragItem=null;dragMove={kind:"carrier",fromPos:i};
+    e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain","carrier:"+i);
+   });
+   title.addEventListener("dragend",()=>{
+    dragMove=null;document.querySelectorAll(".site,.carrier").forEach(x=>x.classList.remove("over"));
+   });
+   title.addEventListener("click",e=>{
+    e.stopPropagation();selectedDeck={pos:i,site:null};selected=-1;showDeckInfo();
+   });
+   carrier.append(title);
+   c.items.forEach((item,j)=>{
+    const z=document.createElement("div");
+    z.className="dropzone";
+    z.textContent=item?item.label:"Position "+(j+1)+" — drop labware here";
+    z.addEventListener("dragover",e=>{
+     if(dragMove?.kind==="labware"||dragItem?.kind==="labware"){e.preventDefault();z.classList.add("over")}
+    });
+    z.addEventListener("dragleave",()=>z.classList.remove("over"));
+    z.addEventListener("drop",e=>{
+     if(dragMove?.kind==="labware"){
+      e.preventDefault();e.stopPropagation();z.classList.remove("over");
+      moveLabwareOnDeck(dragMove.fromPos,dragMove.fromSite,i,j);
+     }else if(dragItem?.kind==="labware"){
+      e.preventDefault();e.stopPropagation();z.classList.remove("over");
+      placeLabware(c,j,dragItem.name);
+     }
+    });
+    if(item){
+     z.className="labware "+(colors[item.name]||"blue");
+     z.textContent=item.label;z.draggable=true;
+     z.title=item.name+" — drag to move; click to inspect";
+     z.addEventListener("dragstart",e=>{
+      dragItem=null;dragMove={kind:"labware",fromPos:i,fromSite:j};
+      e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain","labware:"+i+":"+j);
+     });
+     z.addEventListener("dragend",()=>{
+      dragMove=null;document.querySelectorAll(".site,.carrier,.dropzone").forEach(x=>x.classList.remove("over"));
+     });
+     z.onclick=e=>{
+      e.stopPropagation();selectedDeck={pos:i,site:j};selected=-1;showDeckInfo();
+     };
+    }
+    carrier.append(z);
+   });
+   site.append(carrier);
+  }else{
+   const empty=document.createElement("div");
+   empty.style.cssText="font-size:10px;color:#8a98a5;padding:28px 2px;text-align:center";
+   empty.textContent="Empty carrier position";site.append(empty);
+  }
+  d.append(site);
+ });
+ showDeckInfo();
+}
+function showDeckInfo(){
+ const x=selectedDeck;
+ if(!x){$("deckInfo").textContent="No worktable item selected.";renderProperties();return}
+ const c=deck[x.pos];
+ if(!c){$("deckInfo").textContent="Position "+(x.pos+1)+" is empty. Place a carrier here first.";renderProperties();return}
+ const carrierNote=c.name==="DiTi 2Pos + Waste"
+  ?'<p><b>Placement rule:</b> The DiTi Waste container can only be placed in position 3 of this carrier. Positions 1 and 2 are reserved for DiTi tip racks.</p>'
+  :"";
+ if(x.site!==null&&x.site!==undefined){
+  const item=c.items[x.site];
+  $("deckInfo").innerHTML="<b>Worktable position "+(x.pos+1)+" • Carrier position "+(x.site+1)+"</b> — "+(item?item.label+" ("+item.name+")":"Empty")+carrierNote+'<br><button class="btn" id="removeItem">Remove labware</button>';
+  $("removeItem").onclick=()=>{
+   c.items[x.site]=null;validated=false;renderDeck();
+   log("LABWARE REMOVED FROM WORKTABLE POSITION "+(x.pos+1)+", CARRIER POSITION "+(x.site+1));
+  };
+ }else{
+  $("deckInfo").innerHTML="<b>Worktable position "+(x.pos+1)+"</b> — Carrier: "+c.name+"<br>"+c.items.filter(Boolean).length+" / "+c.items.length+" labware positions occupied."+carrierNote+'<br><button class="btn" id="removeCarrier">Remove carrier and its labware</button>';
+  $("removeCarrier").onclick=()=>{
+   if(confirm("Remove this carrier and all labware on it?")){
+    deck[x.pos]=null;validated=false;renderDeck();
+    log("CARRIER REMOVED FROM WORKTABLE POSITION "+(x.pos+1));
+   }
+  };
+ }
+ renderProperties();
+}
 function validate(){
  const findings=EvoWareValidator.validateMethod(method,deck,carrierTypes);
  const errors=findings.filter(x=>x.severity==="error"),warnings=findings.filter(x=>x.severity==="warning"),infos=findings.filter(x=>x.severity==="info");
