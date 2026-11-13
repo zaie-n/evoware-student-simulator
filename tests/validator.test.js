@@ -325,6 +325,13 @@ test("a new tip starts with no previously aspirated liquid", () => {
   assert.equal(hasMessage(findings, "Dispense volume 1 µL exceeds the liquid volume aspirated"), true);
 });
 
+test("labware labels must match exactly to count as duplicates", () => {
+  const deck = deckWithSupplies();
+  deck[0].items[1].label = "samples";
+  const findings = findingsFor([], deck);
+  assert.equal(hasMessage(findings, "used more than once"), false);
+});
+
 for (const item of tests) {
   try {
     item.fn();
