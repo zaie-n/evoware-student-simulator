@@ -7,6 +7,15 @@ const scriptTags = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g
 const inlineScripts = scriptTags.map(match => match[1]).filter(source => source.trim());
 
 assert.ok(html.includes('<script src="validator.js"></script>'), "index.html must load validator.js");
+assert.ok(html.includes('<script src="worktable.js"></script>'), "index.html must load worktable movement helpers");
+assert.ok(html.includes('EvoWareWorktable.isSiteCompatible(c,j,name,carrierTypes)'), "Labware placement must validate a specific carrier site before adding it");
+assert.ok(html.includes('EvoWareWorktable.isLabelUnique(deck,exactName,pos,j)'), "Labware placement must reject duplicate exact labels immediately");
+assert.ok(html.includes('The DiTi Waste container can only be placed in position 3 of this carrier.'), "The carrier properties panel must explain the DiTi Waste position rule");
+assert.ok(html.includes('DiTi Waste can only be placed in position 3 of a DiTi 2Pos + Waste carrier.'), "Invalid DiTi Waste placement must be rejected immediately");
+assert.ok(html.includes('title.draggable=true'), "Carrier headers must be draggable");
+assert.ok(html.includes('z.draggable=true'), "Placed labware must be draggable");
+assert.ok(html.includes('moveCarrierOnDeck(dragMove.fromPos,i)'), "Worktable must support moving or swapping whole carriers");
+assert.ok(html.includes('moveLabwareOnDeck(dragMove.fromPos,dragMove.fromSite,i,j)'), "Worktable must support moving or swapping individual labware");
 assert.ok(html.includes("EvoWareValidator.validateMethod(method,deck,carrierTypes)"), "Validate button must call the extracted validator");
 assert.ok(html.includes('select("waste","DiTi Waste to use",wastes,c.params.waste)'), "Drop DiTi properties must include a DiTi waste selector");
 assert.ok(html.includes('"Drop DiTi":{channels:[1,2,3,4,5,6,7,8],waste:""}'), "Drop DiTi must start with an explicit unselected waste value");
