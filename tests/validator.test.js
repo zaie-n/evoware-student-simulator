@@ -234,6 +234,12 @@ test("duplicate channel selections are rejected", () => {
   assert.equal(hasMessage(findings, "selected more than once"), true);
 });
 
+test("Drop DiTi explains that waste is missing even before a waste label is selected", () => {
+  const findings = findingsFor([getTips(), dropTips({ waste: "" })], deckWithSupplies({ includeWaste: false }));
+  assert.equal(hasErrorAt(findings, 2), true);
+  assert.equal(hasMessage(findings, "No DiTi Waste item is on the worktable"), true);
+});
+
 for (const item of tests) {
   try {
     item.fn();
