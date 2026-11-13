@@ -98,9 +98,9 @@ test("labware cannot be moved into a site that does not support its type", () =>
 
 test("labware swap is rejected when the displaced item cannot occupy the source site", () => {
   const deck = deckFixture();
-  deck[1].items[0] = { name: "DiTi Waste", label: "Misplaced waste" };
+  deck[0].items[1] = { name: "1.5mL tube", label: "Unexpected tube" };
   const before = JSON.stringify(deck);
-  const moved = moveLabware(deck, 0, 0, 1, 0, carrierTypes);
+  const moved = moveLabware(deck, 0, 0, 0, 1, carrierTypes);
   assert.equal(moved.ok, false);
   assert.match(moved.message, /cannot be swapped/);
   assert.equal(JSON.stringify(deck), before);
