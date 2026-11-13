@@ -240,6 +240,25 @@ test("Drop DiTi explains that waste is missing even before a waste label is sele
   assert.equal(hasMessage(findings, "No DiTi Waste item is on the worktable"), true);
 });
 
+test("sparse channel selection preserves physical gaps from the channel 1 reference", () => {
+  const sparseTips = { ...getTips(), params: { ...getTips().params, channels: [2, 5] } };
+  const findings = findingsFor([
+    sparseTips,
+    aspirate({ channels: [2, 5], wells: ["B3", "E3"] })
+  ], deckWithSupplies());
+  assert.equal(errors(findings).length, 0, JSON.stringify(errors(findings), null, 2));
+});
+
+test("sparse channel selections cannot use compressed well positions", () => {
+  const sparseTips = { ...getTips(), params: { ...getTips().params, channels: [2, 5] } };
+  const findings = findingsFor([
+    sparseTips,
+    aspirate({ channels: [2, 5], wells: ["A3", "D3"] })
+  ], deckWithSupplies());
+  assert.equal(hasErrorAt(findings, 2), true);
+  assert.equal(hasMessage(findings, "physical spacing of the selected LiHa channels"), true);
+});
+
 for (const item of tests) {
   try {
     item.fn();
