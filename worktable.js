@@ -17,6 +17,14 @@
     return allowed.includes(labwareName);
   }
 
+  function isLabelUnique(deck, label, excludePos = -1, excludeSite = -1) {
+    return (deck || []).every((carrier, pos) =>
+      !carrier || (carrier.items || []).every((item, site) =>
+        !item || (pos === excludePos && site === excludeSite) || item.label !== label
+      )
+    );
+  }
+
   function findFirstCompatibleSite(carrier, labwareName, carrierTypes) {
     if (!carrier || !Array.isArray(carrier.items)) return -1;
     return carrier.items.findIndex((item, index) =>
@@ -78,5 +86,5 @@
     return { ok: true, changed: true, swapped: !!targetCarrier, carrier: movingCarrier, displaced: targetCarrier };
   }
 
-  return { isSiteCompatible, findFirstCompatibleSite, moveLabware, moveCarrier };
+  return { isSiteCompatible, isLabelUnique, findFirstCompatibleSite, moveLabware, moveCarrier };
 });
