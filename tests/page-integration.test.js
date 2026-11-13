@@ -8,6 +8,14 @@ const inlineScripts = scriptTags.map(match => match[1]).filter(source => source.
 
 assert.ok(html.includes('<script src="validator.js"></script>'), "index.html must load validator.js");
 assert.ok(html.includes('<script src="worktable.js"></script>'), "index.html must load worktable movement helpers");
+assert.ok(html.includes('id="renameItem"') && html.includes('id="removeItem"'), "Selected labware must show Rename labware next to Remove labware");
+assert.ok(html.includes("EvoWareWorktable.renameLabware(deck,x.pos,x.site,requested)"), "Rename labware action must use the rename helper");
+assert.ok(html.includes("Associated commands were not changed automatically"), "Rename confirmation must state associated commands are not updated automatically");
+assert.ok(html.includes("function updateDeckSelectionHighlight()"), "Worktable selection must update visible highlighting");
+assert.ok(html.includes(".carrier.selected-carrier"), "Selected carrier must receive a yellow outline");
+assert.ok(html.includes(".labware.selected-labware"), "Selected labware must receive a yellow outline");
+assert.ok(html.includes('el.classList.toggle("selected-carrier",!!chosen)'), "Carrier highlight must track the selected carrier");
+assert.ok(html.includes('el.classList.toggle("selected-labware",!!chosen)'), "Labware highlight must track the selected labware");
 assert.ok(html.includes('EvoWareWorktable.isSiteCompatible(c,j,name,carrierTypes)'), "Labware placement must validate a specific carrier site before adding it");
 assert.ok(html.includes('EvoWareWorktable.isLabelUnique(deck,exactName,pos,j)'), "Labware placement must reject duplicate exact labels immediately");
 assert.ok(html.includes('The DiTi Waste container can only be placed in position 3 of this carrier.'), "The carrier properties panel must explain the DiTi Waste position rule");
