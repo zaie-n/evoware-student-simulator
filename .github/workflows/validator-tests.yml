@@ -17,8 +17,10 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - name: Check validator syntax
         run: node --check validator.js
-      - name: Run regression tests
+      - name: Run validator regression tests
         run: node tests/validator.test.js
+      - name: Check page integration and inline JavaScript
+        run: node tests/page-integration.test.js
