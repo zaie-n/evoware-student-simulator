@@ -262,15 +262,14 @@
       }
 
       if (c.name === "Drop DiTi") {
-        const selectedWaste = items.find(item => item.label === p.waste && item.name === "DiTi Waste");
-        if (!p.waste) {
-          if (hasCarriers) add("error", n, "Select the DiTi Waste item that this command should use.");
+        const availableWaste = items.filter(item => item.name === "DiTi Waste");
+        const selectedWaste = availableWaste.find(item => item.label === p.waste);
+        if (!availableWaste.length) {
+          if (hasCarriers) add("error", n, "No DiTi Waste item is on the worktable. Add DiTi Waste to site 3 of a DiTi 2Pos + Waste carrier.");
+        } else if (!p.waste) {
+          add("error", n, "Select the DiTi Waste item that this command should use.");
         } else if (!selectedWaste) {
-          if (hasCarriers) {
-            add("error", n, items.some(item => item.name === "DiTi Waste")
-              ? "The selected DiTi Waste label is not on the worktable. Choose the label of an existing DiTi Waste item."
-              : "No DiTi Waste item is on the worktable. Add DiTi Waste to site 3 of a DiTi 2Pos + Waste carrier.");
-          }
+          add("error", n, "The selected DiTi Waste label is not on the worktable. Choose the label of an existing DiTi Waste item.");
         } else if (!isSiteCompatible(selectedWaste, carrierTypes)) {
           // The worktable position/site finding identifies the misplaced waste.
         }
