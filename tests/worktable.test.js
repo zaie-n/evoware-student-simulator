@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const {
   isSiteCompatible,
+  isLabelUnique,
   findFirstCompatibleSite,
   moveLabware,
   moveCarrier
@@ -148,6 +149,18 @@ test("moving a carrier to its current position makes no change", () => {
   assert.equal(moved.ok, true);
   assert.equal(moved.changed, false);
   assert.equal(JSON.stringify(deck), before);
+});
+
+test("worktable prevents an exact duplicate labware label", () => {
+  const deck = deckFixture();
+  assert.equal(isLabelUnique(deck, "Samples"), false);
+  assert.equal(isLabelUnique(deck, "New Samples"), true);
+});
+
+test("worktable label uniqueness is exact and case-sensitive", () => {
+  const deck = deckFixture();
+  assert.equal(isLabelUnique(deck, "samples"), true);
+  assert.equal(isLabelUnique(deck, "Samples", 0, 0), true);
 });
 
 for (const item of tests) {
