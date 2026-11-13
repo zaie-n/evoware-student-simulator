@@ -51,6 +51,7 @@ main{padding:10px;max-width:1600px;margin:auto}
 .validation-list{padding:8px 10px;max-height:260px;overflow:auto}
 .validation-item{display:grid;grid-template-columns:76px minmax(0,1fr);gap:8px;padding:7px 5px;border-bottom:1px solid #e0e5e9;font-size:11px;line-height:1.45}
 .validation-item:last-child{border-bottom:0}
+.validation-item[role="button"]{cursor:pointer}.validation-item[role="button"]:hover,.validation-item[role="button"]:focus{background:#e7f1fa;outline:1px solid #8fb6d6}
 .validation-severity{font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.3px}
 .validation-severity.error{color:#a3332b}.validation-severity.warning{color:#946500}.validation-severity.info{color:#356b91}
 .validation-empty{padding:12px;color:#526779;font-size:11px}
@@ -113,6 +114,7 @@ main{padding:10px;max-width:1600px;margin:auto}
 <p class="sub" style="padding:8px 2px">Independent educational simulator. Not affiliated with, endorsed by, or produced by Tecan. Tecan, Freedom EVO, and EVOware are trademarks of their respective owner. This simulator does not connect to an instrument or generate executable instrument methods.</p>
 </main>
 <div class="modalback" id="modalBack"><div class="modal"><h3 id="modalTitle">Configure item</h3><div id="modalBody"></div><div class="actions"><button class="btn" id="cancelModal">Cancel</button><button class="btn primary" id="confirmModal">Place item</button></div></div></div>
+<script src="validator.js"></script>
 <script>
 (()=>{
 const $=id=>document.getElementById(id);
@@ -125,7 +127,7 @@ const categories={
 const carrierTypes={
  "MP 4Pos flat":{sites:4,compatible:["96 Well Microplate"],label:"4-position microplate carrier"},
  "MP 4Pos flat - MagPlate":{sites:4,compatible:["96 Well Microplate - MagPlat"],label:"4-position magnetic microplate carrier"},
- "DiTi 2Pos + Waste":{sites:3,compatible:["DiTi 1000µL LiHa","DiTi 200µL LiHa","DiTi Waste"],label:"Two DiTi racks plus waste"},
+ "DiTi 2Pos + Waste":{sites:3,compatible:["DiTi 1000µL LiHa","DiTi 200µL LiHa","DiTi Waste"],siteCompatible:{0:["DiTi 1000µL LiHa","DiTi 200µL LiHa"],1:["DiTi 1000µL LiHa","DiTi 200µL LiHa"],2:["DiTi Waste"]},label:"Two DiTi rack sites plus DiTi waste at site 3"},
  "Trough 3Pos 25+100ml":{sites:3,compatible:["Trough 100ml"],label:"Three trough positions"},
  "Tube 13mm 16 Pos":{sites:16,compatible:["1.5mL tube","0.2mL tube"],label:"16-position tube carrier"}
 };
@@ -166,7 +168,8 @@ function renderProperties(){
  const loopOptions=scope=>{c.params.loopOptions=c.params.loopOptions||{enabled:false,source:{},destination:{},target:{}};let root=c.params.loopOptions,box=document.createElement("div");box.style.cssText="border:1px solid #bdc8d2;background:#f4f7fa;padding:8px;margin:9px 0";let h=document.createElement("label");h.style.cssText="font-size:11px;font-weight:bold";let master=document.createElement("input");master.type="checkbox";master.checked=!!root.enabled;h.append(master," Enable loop options");box.append(h);let count=document.createElement("div");count.style.cssText="font-size:10px;color:#667789;margin:5px 0";box.append(count);let rows=document.createElement("div");box.append(rows);let opts=root[scope]||(root[scope]={});let dims=["column","row","well","labware"];
  const paint=()=>{rows.innerHTML="";let n=0;dims.forEach(d=>{let o=opts[d]||(opts[d]={enabled:false,step:1});let line=document.createElement("label");line.style.cssText="display:flex;align-items:center;gap:7px;margin:6px 0;font-size:11px";let cb=document.createElement("input");cb.type="checkbox";cb.checked=!!o.enabled;cb.disabled=!master.checked;let step=document.createElement("input");step.type="number";step.min=1;step.value=o.step||1;step.title="Advance by this many positions per loop cycle";step.style.cssText="width:58px;margin-left:auto";step.disabled=!master.checked||!o.enabled;cb.onchange=()=>{o.enabled=cb.checked;paint()};step.onchange=()=>o.step=Math.max(1,Number(step.value)||1);line.append(cb,document.createTextNode("Vary "+d),step);rows.append(line);if(o.enabled)n++});count.textContent="Loop options selected: "+n+" (protected count)"};
  master.onchange=()=>{root.enabled=master.checked;paint()};paint();f.append(box)};
- if(c.name==="Get DiTi"){let racks=[...new Set(items.filter(x=>["DiTi 1000µL LiHa","DiTi 200µL LiHa"].includes(x.name)).map(x=>x.name))];select("tips","Tip rack currently on worktable",racks,c.params.tips)}
+ if(c.name==="Get DiTi"){let racks=[...new Set(items.filter(x=>["DiTi 1000µL LiHa","DiTi 200µL LiHa"].includes(x.name)).map(x=>x.name))];select("tips","DiTi type available on worktable",racks,c.params.tips)}
+ if(c.name==="Drop DiTi"){let wastes=items.filter(x=>x.name==="DiTi Waste").map(x=>x.label);select("waste","DiTi Waste to use",wastes,c.params.waste)}
  if(["Get DiTi","Drop DiTi"].includes(c.name)){addChannelPicker(area,c.params)}
  if(c.name==="Begin Loop"){input("loopName","Loop name",c.params.loopName||"");input("cycles","Loop cycles",c.params.cycles||1,"number",1)}
  if(c.name==="End Loop")input("loopName","Loop name",c.params.loopName||"");
@@ -191,101 +194,7 @@ function placeLabware(c,j,name){$("properties").classList.add("compact");if(!car
 function renderDeck(){let d=$("deck");d.innerHTML="";deck.forEach((c,i)=>{let site=document.createElement("div");site.className="site";site.dataset.pos=i+1;site.innerHTML=`<div class="sitehead">Position ${i+1}</div>`;site.addEventListener("dragover",e=>{e.preventDefault();site.classList.add("over")});site.addEventListener("dragleave",()=>site.classList.remove("over"));site.addEventListener("drop",e=>{e.preventDefault();site.classList.remove("over");if(!dragItem)return;if(dragItem.kind==="carrier"){if(deck[i]){alert("This position already has a carrier. Remove it before replacing it.");return}deck[i]={name:dragItem.name,items:Array(carrierTypes[dragItem.name].sites).fill(null)};selectedDeck={pos:i,site:null};log(`CARRIER PLACED: ${dragItem.name} AT POSITION ${i+1}`);dragItem=null;validated=false;$("properties").classList.add("compact");renderDeck()}else if(dragItem.kind==="labware"){if(!deck[i]){alert("Place a carrier at this position first.");return}let free=deck[i].items.findIndex(x=>x===null);if(free<0){alert("All sites on this carrier are occupied.");return}placeLabware(deck[i],free,dragItem.name)}});site.addEventListener("click",()=>{selectedDeck={pos:i,site:null};showDeckInfo()});if(c){let carrier=document.createElement("div");carrier.className="carrier";let title=document.createElement("div");title.className="carriername";title.textContent=c.name;carrier.append(title);c.items.forEach((item,j)=>{let z=document.createElement("div");z.className="dropzone";z.textContent=item?`${item.label} (${item.name})`:`Site ${j+1} — drop labware here`;z.addEventListener("dragover",e=>{e.preventDefault();z.classList.add("over")});z.addEventListener("dragleave",()=>z.classList.remove("over"));z.addEventListener("drop",e=>{e.preventDefault();e.stopPropagation();z.classList.remove("over");if(dragItem?.kind==="labware")placeLabware(c,j,dragItem.name)});if(item){z.className="labware "+(colors[item.name]||"blue");z.textContent=item.label;z.title=`${item.name} — click to inspect/remove`;z.onclick=e=>{e.stopPropagation();selectedDeck={pos:i,site:j};showDeckInfo()}}carrier.append(z)});site.append(carrier)}else{let empty=document.createElement("div");empty.style.cssText="font-size:10px;color:#8a98a5;padding:28px 2px;text-align:center";empty.textContent="Empty carrier position";site.append(empty)}d.append(site)});showDeckInfo()}
 function showDeckInfo(){let x=selectedDeck;if(!x){$("deckInfo").textContent="No worktable item selected.";return}let c=deck[x.pos];if(!c){$("deckInfo").textContent=`Position ${x.pos+1} is empty. Place a carrier here first.`;return}if(x.site!==null&&x.site!==undefined){let item=c.items[x.site];$("deckInfo").innerHTML=`<b>Position ${x.pos+1} • Site ${x.site+1}</b> — ${item?`${item.label} (${item.name})`:"Empty"}<br><button class="btn" id="removeItem">Remove labware</button>`;$("removeItem").onclick=()=>{c.items[x.site]=null;validated=false;renderDeck();log(`LABWARE REMOVED FROM POSITION ${x.pos+1}, SITE ${x.site+1}`)}}else{$("deckInfo").innerHTML=`<b>Position ${x.pos+1}</b> — Carrier: ${c.name}<br>${c.items.filter(Boolean).length} / ${c.items.length} labware sites occupied. <button class="btn" id="removeCarrier">Remove carrier and its labware</button>`;$("removeCarrier").onclick=()=>{if(confirm("Remove this carrier and all labware on it?")){deck[x.pos]=null;validated=false;renderDeck();log(`CARRIER REMOVED FROM POSITION ${x.pos+1}`)}}}}
 function validate(){
- const findings=[],items=getLabwareItems(),mounted={},stack=[];
- const add=(severity,command,message)=>findings.push({severity,command,message});
- const hasLabwareCommands=method.some(c=>["Get DiTi","Aspirate","Dispense","Mix"].includes(c.name));
- if(!method.length)add("error",null,"The script is empty. Add at least one command.");
- if(hasLabwareCommands&&!deck.some(Boolean))add("error",null,"The method uses labware or disposable tips, but the worktable has no carriers.");
- method.forEach((c,i)=>{
-  const n=i+1,p=c.params||{},ch=selectedChannels(p);
-  if(c.name==="Begin Loop"){
-   const loopName=String(p.loopName||"").trim();
-   stack.push({index:i,name:loopName});
-   if(!loopName)add("error",n,"Enter a descriptive name for this loop. Use the same name in its matching End Loop.");
-   const cycles=Number(p.cycles);
-   if(!Number.isInteger(cycles)||cycles<1)add("error",n,"Loop cycles must be a positive whole number.");
-  }
-  if(c.name==="End Loop"){
-   const loopName=String(p.loopName||"").trim();
-   if(!loopName)add("error",n,"Enter the name of the loop this command closes.");
-   if(!stack.length)add("error",n,"This End Loop has no matching Begin Loop.");
-   else if(loopName&&stack[stack.length-1].name!==loopName)
-    add("error",n,'End Loop name "'+loopName+'" does not match the active Begin Loop'+(stack[stack.length-1].name?' "'+stack[stack.length-1].name+'".':' (which has no name).'));
-   else if(loopName)stack.pop();
-  }
-  if(["Get DiTi","Drop DiTi","Aspirate","Dispense","Mix"].includes(c.name)&&!ch.length)
-   add("error",n,"Select at least one LiHa channel.");
-
-  if(c.name==="Get DiTi"){
-   const rack=items.find(x=>x.name===p.tips);
-   if(!rack)add("error",n,"Select a tip rack that is placed on the worktable.");
-   ch.forEach(channel=>{
-    if(mounted[channel])add("error",n,"Channel "+channel+" already has a mounted tip. Drop the existing tip before acquiring another.");
-    else if(rack)mounted[channel]=p.tips;
-   });
-  }
-
-  if(["Aspirate","Dispense","Mix"].includes(c.name)){
-   ch.forEach(channel=>{if(!mounted[channel])add("error",n,"Channel "+channel+" has no mounted tip. Add a Get DiTi command before this operation.")});
-   const key=c.name==="Aspirate"?"source":c.name==="Dispense"?"destination":"target";
-   const item=items.find(x=>x.label===p[key]);
-   if(!item)add("error",n,"Choose valid worktable labware for the "+(c.name==="Aspirate"?"source":c.name==="Dispense"?"destination":"mixing target")+".");
-   else{
-    const wells=Array.isArray(p.wells)?p.wells:[];
-    const L=wellLayout(item);
-    if(wells.length!==ch.length)add("error",n,"Select exactly "+ch.length+" labware position"+(ch.length===1?"":"s")+" for the selected channels.");
-    if(new Set(wells).size!==wells.length)add("error",n,"The same labware position is selected more than once.");
-    const cols=new Set(wells.map(w=>L.kind==="plate"?Number(String(w).match(/\d+$/)?.[0]):1));
-    if(cols.size>1)add("error",n,"Selected positions must be in one column for this eight-channel selection.");
-   }
-   const volume=Number(p.volume);
-   if(!Number.isFinite(volume)||volume<=0)add("error",n,"Enter a positive pipetting volume.");
-   ch.forEach(channel=>{
-    const tip=mounted[channel],min=tip==="DiTi 1000µL LiHa"?10:tip==="DiTi 200µL LiHa"?2:null,max=tip==="DiTi 1000µL LiHa"?1000:tip==="DiTi 200µL LiHa"?200:null;
-    if(min!==null&&Number.isFinite(volume)&&volume>0&&(volume<min||volume>max))
-     add("error",n,volume+" µL is outside the configured "+tip+" range for channel "+channel+" ("+min+"–"+max+" µL).");
-   });
-   if(c.name!=="Mix"&&!["Water","Glycerol","Ethanol"].includes(p.liquidClass))
-    add("error",n,"Choose a liquid class from the simulator's available liquid classes.");
-   if(c.name==="Mix"&&(!Number.isInteger(Number(p.cycles))||Number(p.cycles)<1))
-    add("error",n,"Mix cycles must be a positive whole number.");
-   const lo=p.loopOptions;
-   if(lo?.enabled){
-    if(!stack.length)add("error",n,"Loop Options are enabled, but this command is not inside a Begin Loop / End Loop block.");
-    const scope=lo[key]||{};
-    const enabled=Object.entries(scope).filter(([,v])=>v?.enabled);
-    if(!enabled.length)add("error",n,"Choose at least one loop dimension or turn off Loop Options.");
-    enabled.forEach(([dimension,settings])=>{
-     if(!["column","row","well","labware"].includes(dimension))add("error",n,"The selected loop dimension is not supported.");
-     if(!Number.isInteger(Number(settings.step))||Number(settings.step)<1)add("error",n,"The "+dimension+" loop increment must be a positive whole number.");
-    });
-   }
-  }
-
-  if(c.name==="Drop DiTi")ch.forEach(channel=>{
-   if(!mounted[channel])add("error",n,"Channel "+channel+" has no mounted tip to drop.");
-   else delete mounted[channel];
-  });
-
-  if(c.name==="Start Timer"){
-   const seconds=Number(p.seconds);
-   if(!Number.isFinite(seconds)||seconds<0)add("error",n,"Timer length must be zero or a positive number of seconds.");
-  }
-  if(c.name==="Wait for Timer"&&!String(p.timer||"").trim())
-   add("error",n,"Specify the timer this command should wait for.");
-  if(c.name==="Set Variable"){
-   if(!/^[A-Za-z_][A-Za-z0-9_]*$/.test(String(p.name||"").trim()))add("error",n,"Enter a valid variable name (letters, numbers, and underscores; it cannot start with a number).");
-   if(p.value===""||!Number.isFinite(Number(p.value)))add("error",n,"Enter a numeric value for this variable.");
-  }
-  if(c.name==="If – Then"&&!String(p.condition||"").trim())
-   add("error",n,"Enter a condition for the If–Then command.");
-  if(c.name==="User Prompt"&&!String(p.message||"").trim())
-   add("error",n,"Enter the message students should see.");
- });
- stack.forEach(loop=>add("error",loop.index+1,'Begin Loop "'+(loop.name||"unnamed")+'" is missing a matching End Loop with the same name.'));
- Object.keys(mounted).forEach(channel=>add("warning",null,"Channel "+channel+" still has a mounted tip at the end of the method. Confirm that leaving it mounted is intentional."));
- add("info",null,"Checked "+method.length+" command"+(method.length===1?"":"s")+", "+items.length+" worktable labware item"+(items.length===1?"":"s")+", and loop structure.");
-
+ const findings=EvoWareValidator.validateMethod(method,deck,carrierTypes);
  const errors=findings.filter(x=>x.severity==="error"),warnings=findings.filter(x=>x.severity==="warning"),infos=findings.filter(x=>x.severity==="info");
  validated=errors.length===0;
  $("validationState").textContent=validated?"Validation passed":"Validation failed";
@@ -302,7 +211,13 @@ function validate(){
   const row=document.createElement("div");row.className="validation-item";
   const sev=document.createElement("span");sev.className="validation-severity "+f.severity;sev.textContent=f.severity;
   const msg=document.createElement("span");msg.textContent=(f.command?"Command "+f.command+": ":"")+f.message;
-  row.append(sev,msg);list.append(row);
+  row.append(sev,msg);
+  if(f.command){
+   row.tabIndex=0;row.setAttribute("role","button");row.title="Select command "+f.command+" in the Script Editor";
+   const go=()=>{selected=f.command-1;renderMethod();const target=$("script").querySelector(".command.selected");if(target)target.scrollIntoView({block:"nearest",behavior:"smooth"})};
+   row.addEventListener("click",go);row.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}});
+  }
+  list.append(row);
  });
  $("status").textContent=validated?"STATUS: VALIDATION PASSED":"STATUS: VALIDATION FAILED";
  $("runFeedback").textContent=validated?"Validation passed. Review any warnings before running.":errors.length+" validation error"+(errors.length===1?"":"s")+" must be resolved before running.";
