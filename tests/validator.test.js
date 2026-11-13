@@ -259,6 +259,72 @@ test("sparse channel selections cannot use compressed well positions", () => {
   assert.equal(hasMessage(findings, "physical spacing of the selected LiHa channels"), true);
 });
 
+test("dispense volume equal to aspirated volume is allowed", () => {
+  const findings = findingsFor([
+    getTips(),
+    aspirate({ volume: 80 }),
+    dispense({ volume: 80 }),
+    dropTips()
+  ], deckWithSupplies());
+  assert.equal(errors(findings).length, 0, JSON.stringify(errors(findings), null, 2));
+});
+
+test("dispense volume greater than the aspirated volume is rejected", () => {
+  const findings = findingsFor([
+    getTips(),
+    aspirate({ volume: 80 }),
+    dispense({ volume: 81 })
+  ], deckWithSupplies());
+  assert.equal(hasErrorAt(findings, 3), true);
+  assert.equal(hasMessage(findings, "Dispense volume 81 µL exceeds the liquid volume aspirated"), true);
+});
+
+test("multiple aspirates add to the amount available for dispensing", () => {
+  const findings = findingsFor([
+    getTips(),
+    aspirate({ volume: 30 }),
+    aspirate({ volume: 20 }),
+    dispense({ volume: 50 }),
+    dropTips()
+  ], deckWithSupplies());
+  assert.equal(errors(findings).length, 0, JSON.stringify(errors(findings), null, 2));
+});
+
+test("successive partial dispenses cannot exceed the remaining aspirated volume", () => {
+  const findings = findingsFor([
+    getTips(),
+    aspirate({ volume: 30 }),
+    dispense({ volume: 20 }),
+    dispense({ volume: 11 })
+  ], deckWithSupplies());
+  assert.equal(hasErrorAt(findings, 4), true);
+  assert.equal(hasMessage(findings, "(10 µL available)"), true);
+});
+
+test("aspirated volume is tracked independently for each selected channel", () => {
+  const findings = findingsFor([
+    { name: "Get DiTi", params: { tips: "DiTi 200µL LiHa", channels: [1, 2] } },
+    aspirate({ channels: [1], wells: ["A1"], volume: 25 }),
+    aspirate({ channels: [2], wells: ["B1"], volume: 25 }),
+    dispense({ channels: [1], wells: ["A1"], volume: 25 }),
+    dispense({ channels: [2], wells: ["B1"], volume: 25 }),
+    dropTips({ channels: [1, 2] })
+  ], deckWithSupplies());
+  assert.equal(errors(findings).length, 0, JSON.stringify(errors(findings), null, 2));
+});
+
+test("a new tip starts with no previously aspirated liquid", () => {
+  const findings = findingsFor([
+    getTips(),
+    aspirate({ volume: 20 }),
+    dropTips(),
+    getTips(),
+    dispense({ volume: 1 })
+  ], deckWithSupplies());
+  assert.equal(hasErrorAt(findings, 5), true);
+  assert.equal(hasMessage(findings, "Dispense volume 1 µL exceeds the liquid volume aspirated"), true);
+});
+
 for (const item of tests) {
   try {
     item.fn();
