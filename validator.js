@@ -82,11 +82,11 @@
     // Check the actual carrier site, not just whether the labware type exists somewhere.
     const labels = new Map();
     items.forEach(item => {
-      const normalizedLabel = String(item.label || "").trim().toLowerCase();
-      if (!normalizedLabel) {
+      const exactLabel = String(item.label || "").trim();
+      if (!exactLabel) {
         add("error", null, "A labware item on the worktable has no label. Give it a label so commands can identify it.");
       } else {
-        labels.set(normalizedLabel, (labels.get(normalizedLabel) || 0) + 1);
+        labels.set(exactLabel, (labels.get(exactLabel) || 0) + 1);
       }
       if (!isSiteCompatible(item, carrierTypes)) {
         add(
