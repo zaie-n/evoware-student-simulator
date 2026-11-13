@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const {
   isSiteCompatible,
   isLabelUnique,
+  renameLabware,
   findFirstCompatibleSite,
   moveLabware,
   moveCarrier
@@ -161,6 +162,52 @@ test("worktable label uniqueness is exact and case-sensitive", () => {
   const deck = deckFixture();
   assert.equal(isLabelUnique(deck, "samples"), true);
   assert.equal(isLabelUnique(deck, "Samples", 0, 0), true);
+});
+
+test("labware can be renamed and retains its previous exact name as history", () => {
+  const deck = deckFixture();
+  const result = renameLabware(deck, 0, 0, "Input plate A");
+  assert.equal(result.ok, true);
+  assert.equal(result.changed, true);
+  assert.equal(result.oldLabel, "Samples");
+  assert.equal(result.newLabel, "Input plate A");
+  assert.equal(deck[0].items[0].label, "Input plate A");
+  assert.deepEqual(deck[0].items[0].renamedFrom, ["Samples"]);
+});
+
+test("renaming does not permit another item to claim a previous name", () => {
+  const deck = deckFixture();
+  renameLabware(deck, 0, 0, "Input plate A");
+  assert.equal(isLabelUnique(deck, "Samples"), false);
+  const duplicate = renameLabware(deck, 0, 1, "Samples");
+  assert.equal(duplicate.ok, false);
+  assert.match(duplicate.message, /previous labware name/);
+});
+
+test("labware can be renamed more than once while retaining all prior names", () => {
+  const deck = deckFixture();
+  renameLabware(deck, 0, 0, "Input plate A");
+  const result = renameLabware(deck, 0, 0, "Sample input");
+  assert.equal(result.ok, true);
+  assert.equal(deck[0].items[0].label, "Sample input");
+  assert.deepEqual(deck[0].items[0].renamedFrom, ["Samples", "Input plate A"]);
+});
+
+test("renaming to the same exact name is a no-op", () => {
+  const deck = deckFixture();
+  const before = JSON.stringify(deck);
+  const result = renameLabware(deck, 0, 0, "Samples");
+  assert.equal(result.ok, true);
+  assert.equal(result.changed, false);
+  assert.equal(JSON.stringify(deck), before);
+});
+
+test("renaming rejects blank names and duplicate current names without changing labware", () => {
+  const deck = deckFixture();
+  const before = JSON.stringify(deck);
+  assert.equal(renameLabware(deck, 0, 0, "   ").ok, false);
+  assert.equal(renameLabware(deck, 0, 0, "Destination").ok, false);
+  assert.equal(JSON.stringify(deck), before);
 });
 
 for (const item of tests) {
