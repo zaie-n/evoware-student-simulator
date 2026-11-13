@@ -11,6 +11,7 @@ assert.ok(html.includes("EvoWareValidator.validateMethod(method,deck,carrierType
 assert.ok(html.includes('select("waste","DiTi Waste to use",wastes,c.params.waste)'), "Drop DiTi properties must include a DiTi waste selector");
 assert.ok(html.includes('"Drop DiTi":{channels:[1,2,3,4,5,6,7,8],waste:""}'), "Drop DiTi must start with an explicit unselected waste value");
 assert.ok(html.includes('row.setAttribute("role","button")'), "Command-specific findings must be selectable");
+assert.ok(html.includes("activeChannels.map(ch=>ch-1)"), "Well selection must retain channel gaps relative to channel 1");
 assert.ok(html.includes('target.scrollIntoView({block:"nearest",behavior:"smooth"})'), "Selecting a finding must scroll its command into view");
 assert.ok(inlineScripts.length > 0, "index.html must contain its application script");
 
