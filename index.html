@@ -43,11 +43,11 @@ main{padding:10px;max-width:1600px;margin:auto}
 .dropzone{border:1px dashed #8494a2;min-height:48px;padding:9px 5px;font-size:10px;color:#536a7e;text-align:center;display:flex;align-items:center;justify-content:center;cursor:copy;transition:background .12s,outline .12s}
 .site.over,.carrier.over,.dropzone.over{outline:2px solid #2877b8;background:#d8ebfa}
 .decknote{font-size:11px;color:#586b7d;margin:0 0 8px}
-.lower{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}
+.lower{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}.lower .validation-panel{min-width:0}.simulation-controls-panel{margin-top:9px}.simulation-controls-panel .monitor{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}.simulation-main-actions,.simulation-secondary-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.simulation-main-actions .btn{font-weight:700}.simulation-progress{grid-column:1/-1}.simulation-progress .bar{margin:5px 0}.simulation-feedback{grid-column:1/-1;margin:0}.simulation-secondary-actions{justify-content:flex-end}
 .monitor{padding:10px}.bar{height:9px;background:#e1e6eb;border-radius:5px;overflow:hidden}.bar>div{height:100%;width:0;background:#398b70}
 .log{font:11px Consolas,monospace;max-height:130px;overflow:auto;line-height:1.7;color:#4c6072}
 .status{font-size:11px;font-weight:700}
-.validation-panel{margin:0 0 9px;display:none}.validation-panel.visible{display:block}
+.validation-panel{margin:0;display:block;visibility:hidden;height:0;overflow:hidden;border:0}.validation-panel.visible{visibility:visible;height:auto;border:1px solid #aeb9c4}
 .validation-summary{display:flex;gap:7px;flex-wrap:wrap;padding:9px 10px;background:#eef2f6;border-bottom:1px solid #c8d1da}
 .validation-count{font-size:11px;padding:4px 8px;border:1px solid #c4cdd6;background:#fff;border-radius:3px}
 .validation-list{padding:8px 10px;max-height:260px;overflow:auto}
@@ -67,16 +67,8 @@ main{padding:10px;max-width:1600px;margin:auto}
 <body>
 <header>
  <div><div class="brand">Liquid Handling Lab</div><div class="sub">Independent student training simulator</div></div>
- <div class="toolbar">
-  <button id="validate" class="primary">Validate</button><button id="run" class="primary">▶ Run simulation</button>
- </div>
 </header>
 <main>
-<section class="panel validation-panel" id="validationPanel">
- <div class="phead">Validation Results <span id="validationState" style="font-weight:400">Not checked</span></div>
- <div class="validation-summary" id="validationSummary"><span class="validation-count">Run Validate to check this method.</span></div>
- <div class="validation-list" id="validationResults"><div class="validation-empty">Validation findings will appear here, with the command number and a description of what needs attention.</div></div>
-</section>
 <div class="topgrid">
  <section class="panel">
   <div class="phead">Control Bar</div>
@@ -104,13 +96,21 @@ main{padding:10px;max-width:1600px;margin:auto}
   <div id="deckInfo" class="hint">No worktable item selected.</div>
  </div>
 </section>
+<section class="panel simulation-controls-panel">
+ <div class="phead">Simulation Controls</div>
+ <div class="monitor">
+  <div class="simulation-main-actions"><button id="validate" class="btn primary">Validate</button><button id="run" class="btn primary">▶ Run simulation</button></div>
+  <div class="simulation-secondary-actions"><button class="btn" id="stepRun">Step command</button><button class="btn" id="pauseRun" hidden>Pause</button><button class="btn" id="resetRun">Reset run</button></div>
+  <div class="simulation-progress"><div style="display:flex;justify-content:space-between;gap:8px"><span class="status" id="status">STATUS: NOT VALIDATED</span><span id="percent">0%</span></div><div class="bar"><div id="progress"></div></div></div>
+  <div class="hint simulation-feedback" id="runFeedback">Validate your method before running. The simulator checks the worktable and method structure.</div>
+ </div>
+</section>
 <div class="lower">
- <section class="panel"><div class="phead">Method Execution</div><div class="monitor">
-  <div class="flex" style="display:flex;justify-content:space-between;gap:8px"><span class="status" id="status">STATUS: NOT VALIDATED</span><span id="percent">0%</span></div>
-  <div class="bar" style="margin:8px 0"><div id="progress"></div></div>
-  <div class="sim-controls"><button class="btn" id="stepRun">Step command</button><button class="btn" id="pauseRun" hidden>Pause</button><button class="btn" id="resetRun">Reset run</button></div>
-  <div class="hint" id="runFeedback" style="margin-top:8px">Validate your method before running. The simulator checks the worktable and method structure.</div>
- </div></section>
+ <section class="panel validation-panel" id="validationPanel">
+  <div class="phead">Validation Results <span id="validationState" style="font-weight:400">Not checked</span></div>
+  <div class="validation-summary" id="validationSummary"><span class="validation-count">Run Validate to check this method.</span></div>
+  <div class="validation-list" id="validationResults"><div class="validation-empty">Validation findings will appear here, with the command number and a description of what needs attention.</div></div>
+ </section>
  <section class="panel"><div class="phead">Execution Log</div><div class="monitor"><div class="log" id="log">SYSTEM READY<br>WAITING FOR METHOD VALIDATION</div></div></section>
 </div>
 <p class="sub" style="padding:8px 2px">Independent educational simulator. Not affiliated with, endorsed by, or produced by Tecan. Tecan, Freedom EVO, and EVOware are trademarks of their respective owner. This simulator does not connect to an instrument or generate executable instrument methods.</p>
@@ -554,7 +554,11 @@ async function nextStep(){
  const token=simulationRunId,index=runIndex,command=method[index];
  selected=index;
  const rows=[...$("script").querySelectorAll(".command")];rows.forEach((row,i)=>row.classList.toggle("simulation-current",i===index));
- if(rows[index])rows[index].scrollIntoView({block:"nearest",behavior:"smooth"});
+ if(rows[index]){
+  const scriptPanel=$("script"),panelRect=scriptPanel.getBoundingClientRect(),rowRect=rows[index].getBoundingClientRect();
+  if(rowRect.top<panelRect.top)scriptPanel.scrollTop-=panelRect.top-rowRect.top+6;
+  else if(rowRect.bottom>panelRect.bottom)scriptPanel.scrollTop+=rowRect.bottom-panelRect.bottom+6;
+ }
  $("status").textContent="STATUS: RUNNING";$("runFeedback").textContent="Command "+(index+1)+": "+command.name;
  log("COMMAND "+(index+1)+": "+command.name.toUpperCase());
  await executeSimulationCommand(command,token);
