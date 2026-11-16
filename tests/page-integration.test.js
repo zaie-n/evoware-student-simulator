@@ -8,6 +8,12 @@ const inlineScripts = scriptTags.map(match => match[1]).filter(source => source.
 
 assert.ok(html.includes('<script src="validator.js"></script>'), "index.html must load validator.js");
 assert.ok(html.includes('<script src="worktable.js"></script>'), "index.html must load worktable movement helpers");
+assert.ok(html.includes('id="pauseRun"') && html.includes('id="simAction"'), "Live simulation must expose pause and current-action feedback");
+assert.ok(html.includes("async function executeSimulationCommand(command,token)"), "Run simulation must execute commands through the live simulation engine");
+assert.ok(html.includes("function moveSimulationArm(label,wells=[])"), "Live worktable must animate the arm to configured labware and wells");
+assert.ok(html.includes('class="simulation-arm-layer"'), "Worktable must include an animated LiHa arm overlay");
+assert.ok(html.includes("simulationPlaying=true"), "Run simulation must execute the method continuously");
+assert.ok(html.includes("simulationPlaying=false"), "Simulation must support pausing and stepping");
 assert.ok(html.includes('id="renameItem"') && html.includes('id="removeItem"'), "Selected labware must show Rename labware next to Remove labware");
 assert.ok(html.includes("EvoWareWorktable.renameLabware(deck,x.pos,x.site,requested)"), "Rename labware action must use the rename helper");
 assert.ok(html.includes("Associated commands were not changed automatically"), "Rename confirmation must state associated commands are not updated automatically");
