@@ -47,7 +47,7 @@ main{padding:10px;max-width:1600px;margin:auto}
 .monitor{padding:10px}.bar{height:9px;background:#e1e6eb;border-radius:5px;overflow:hidden}.bar>div{height:100%;width:0;background:#398b70}
 .log{font:11px Consolas,monospace;max-height:130px;overflow:auto;line-height:1.7;color:#4c6072}
 .status{font-size:11px;font-weight:700}
-.validation-panel{margin-top:9px}
+.validation-panel{margin:0 0 9px;display:none}.validation-panel.visible{display:block}
 .validation-summary{display:flex;gap:7px;flex-wrap:wrap;padding:9px 10px;background:#eef2f6;border-bottom:1px solid #c8d1da}
 .validation-count{font-size:11px;padding:4px 8px;border:1px solid #c4cdd6;background:#fff;border-radius:3px}
 .validation-list{padding:8px 10px;max-height:260px;overflow:auto}
@@ -72,6 +72,11 @@ main{padding:10px;max-width:1600px;margin:auto}
  </div>
 </header>
 <main>
+<section class="panel validation-panel" id="validationPanel">
+ <div class="phead">Validation Results <span id="validationState" style="font-weight:400">Not checked</span></div>
+ <div class="validation-summary" id="validationSummary"><span class="validation-count">Run Validate to check this method.</span></div>
+ <div class="validation-list" id="validationResults"><div class="validation-empty">Validation findings will appear here, with the command number and a description of what needs attention.</div></div>
+</section>
 <div class="topgrid">
  <section class="panel">
   <div class="phead">Control Bar</div>
@@ -98,11 +103,6 @@ main{padding:10px;max-width:1600px;margin:auto}
   <div class="deckscroll"><div class="deck" id="deck"></div></div>
   <div id="deckInfo" class="hint">No worktable item selected.</div>
  </div>
-</section>
-<section class="panel validation-panel">
- <div class="phead">Validation Results <span id="validationState" style="font-weight:400">Not checked</span></div>
- <div class="validation-summary" id="validationSummary"><span class="validation-count">Run Validate to check this method.</span></div>
- <div class="validation-list" id="validationResults"><div class="validation-empty">Validation findings will appear here, with the command number and a description of what needs attention.</div></div>
 </section>
 <div class="lower">
  <section class="panel"><div class="phead">Method Execution</div><div class="monitor">
@@ -434,6 +434,7 @@ function showDeckInfo(){
  renderProperties();
 }
 function validate(){
+ $("validationPanel").classList.add("visible");
  const findings=EvoWareValidator.validateMethod(method,deck,carrierTypes);
  const errors=findings.filter(x=>x.severity==="error"),warnings=findings.filter(x=>x.severity==="warning"),infos=findings.filter(x=>x.severity==="info");
  validated=errors.length===0;
