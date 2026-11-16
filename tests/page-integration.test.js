@@ -13,6 +13,10 @@ assert.ok(html.includes("async function executeSimulationCommand(command,token)"
 assert.ok(html.includes("function moveSimulationArm(label,wells=[])"), "Live worktable must animate the arm to configured labware and wells");
 assert.ok(html.includes('setAttribute("class","simulation-arm-layer")'), "Worktable must include an animated LiHa arm overlay");
 assert.ok(html.includes("simulationPlaying=true"), "Run simulation must execute the method continuously");
+assert.ok(html.includes("function buildExecutionPlan()"), "Simulation must expand loop bodies into repeated execution steps");
+assert.ok(html.includes("for(let cycle=1;cycle<=cycles;cycle++)appendRange(i+1,end"), "Loop cycles must repeat the commands inside the matching loop");
+assert.ok(html.includes("loopPath.map(x=>x.name+\" \"+x.cycle+\"/\"+x.total)"), "Execution feedback must identify the active loop iteration");
+assert.ok(html.includes("runSteps=buildExecutionPlan()"), "Run preparation must build the expanded execution plan");
 assert.ok(html.includes("simulationPlaying=false"), "Simulation must support pausing and stepping");
 assert.ok(html.includes('id="renameItem"') && html.includes('id="removeItem"'), "Selected labware must show Rename labware next to Remove labware");
 assert.ok(html.includes("EvoWareWorktable.renameLabware(deck,x.pos,x.site,requested)"), "Rename labware action must use the rename helper");
