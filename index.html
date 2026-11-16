@@ -31,7 +31,7 @@ main{padding:10px;max-width:1600px;margin:auto}
 .props{padding:10px;min-height:0;max-height:none;overflow:visible;background:#fff;transition:all .18s ease}.props.compact{padding:7px 10px;min-height:38px;max-height:42px;overflow:hidden}.props.compact #paramFields,.props.compact #visualPicker,.props.compact #channelError,.props.compact #applyParams{display:none!important}.props.compact>div{margin:0!important}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.fields label{font-size:11px;color:#526476}.fields input,.fields select{display:block;width:100%;margin-top:4px;padding:7px;border:1px solid #b8c3ce;background:white;border-radius:3px}
 .workpanel{margin-top:9px}.workbody{padding:7px;background:#e8edf2}
 .deckscroll{overflow-x:auto;padding-bottom:7px}
-.deck{display:grid;grid-template-columns:repeat(10,minmax(125px,1fr));gap:7px;min-width:1320px;padding:9px;background:#d6dfe7;border:2px solid #9eafbd}
+.deck{display:grid;grid-template-columns:repeat(10,minmax(125px,1fr));gap:7px;min-width:1320px;padding:9px;background:#d6dfe7;border:2px solid #9eafbd;position:relative}.simulation-arm-layer{position:absolute;inset:0;width:100%;height:100%;z-index:8;pointer-events:none;overflow:visible}.simulation-arm-carriage{transition:transform .7s cubic-bezier(.2,.7,.2,1)}.simulation-arm-tip{transition:transform .45s ease}.simulation-target{outline:3px solid #168b69!important;outline-offset:2px;box-shadow:0 0 0 3px #b7e6d4!important;position:relative;z-index:2}.mini-wells{display:grid;gap:2px;justify-content:center;align-content:center;margin:4px auto 1px;max-width:100%;pointer-events:none}.mini-well{width:4px;height:4px;border-radius:50%;background:#4c6980;display:block}.mini-well.active{background:#e35d35;box-shadow:0 0 0 2px #ffe0a8}.labware-label{display:block;overflow-wrap:anywhere}.command.simulation-current{outline:2px solid #168b69;background:#e5f5ee}.sim-status{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;margin:0 0 8px;background:#edf3f7;border:1px solid #c4d0da;font-size:11px}.sim-status strong{color:#216c56}.sim-controls{display:flex;gap:6px;flex-wrap:wrap}
 .site{background:#eef2f5;border:2px solid #929faa;min-height:170px;padding:6px;position:relative}
 .sitehead{font-size:11px;font-weight:700;color:#42566a;border-bottom:1px solid #c1cbd4;padding-bottom:5px;margin-bottom:6px}
 .carrier{border:2px solid #8e9ba7;background:#d4d9de;min-height:125px;padding:5px;display:flex;flex-direction:column;gap:4px}
@@ -100,7 +100,7 @@ main{padding:10px;max-width:1600px;margin:auto}
  <div class="phead">Worktable Editor</div>
  <div class="workbody">
   <p class="decknote"><b>Worktable setup:</b> Each numbered grey outline represents a carrier position. Drag a labware item to another compatible site to move it; dropping on an occupied compatible site swaps the items. Drag a carrier by its header to move it; dropping on an occupied deck position swaps carriers while keeping all their labware together.</p>
-  <div class="deckscroll"><div class="deck" id="deck"></div></div>
+  <div class="sim-status"><span><strong>LIVE SIMULATION</strong> <span id="simAction">Ready. Run a validated method to animate the LiHa.</span></span><span id="simTipState">Tips: none mounted</span></div><div class="deckscroll"><div class="deck" id="deck"></div></div>
   <div id="deckInfo" class="hint">No worktable item selected.</div>
  </div>
 </section>
@@ -108,7 +108,7 @@ main{padding:10px;max-width:1600px;margin:auto}
  <section class="panel"><div class="phead">Method Execution</div><div class="monitor">
   <div class="flex" style="display:flex;justify-content:space-between;gap:8px"><span class="status" id="status">STATUS: NOT VALIDATED</span><span id="percent">0%</span></div>
   <div class="bar" style="margin:8px 0"><div id="progress"></div></div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" id="stepRun">Run next step</button><button class="btn" id="resetRun">Reset run</button></div>
+  <div class="sim-controls"><button class="btn" id="stepRun">Step command</button><button class="btn" id="pauseRun" hidden>Pause</button><button class="btn" id="resetRun">Reset run</button></div>
   <div class="hint" id="runFeedback" style="margin-top:8px">Validate your method before running. The simulator checks the worktable and method structure.</div>
  </div></section>
  <section class="panel"><div class="phead">Execution Log</div><div class="monitor"><div class="log" id="log">SYSTEM READY<br>WAITING FOR METHOD VALIDATION</div></div></section>
@@ -137,7 +137,7 @@ const carrierTypes={
 const colors={"96 Well Microplate":"blue","96 Well Microplate - MagPlat":"blue","DiTi 1000µL LiHa":"yellow","DiTi 200µL LiHa":"yellow","DiTi Waste":"green","Trough 100ml":"green","1.5mL tube":"purple","0.2mL tube":"purple"};
 const icons={"Aspirate":"↑","Dispense":"↓","Mix":"↻","Get DiTi":"▤","Drop DiTi":"▧","Begin Loop":"↻","End Loop":"↘","Set Variable":"ƒ","If – Then":"◇","User Prompt":"▣","Start Timer":"◷","Wait for Timer":"◴"};
 const defaults={"Get DiTi":{tips:"DiTi 200µL LiHa",channels:[1,2,3,4,5,6,7,8]},"Drop DiTi":{channels:[1,2,3,4,5,6,7,8],waste:""},"Aspirate":{source:"",volume:23,liquidClass:"Water",channels:[1,2,3,4,5,6,7,8],wells:[]},"Dispense":{destination:"",volume:23,liquidClass:"Water",channels:[1,2,3,4,5,6,7,8],wells:[]},"Mix":{volume:100,cycles:3},"Begin Loop":{loopName:"",cycles:8},"End Loop":{loopName:""},"Set Variable":{name:"sample_count",value:16},"If – Then":{condition:"sample_count > 0"},"User Prompt":{message:"Check reagent reservoirs"},"Start Timer":{seconds:30},"Wait for Timer":{timer:"mix_timer"}};
-let method=[],selected=-1,deck=Array.from({length:10},()=>null),selectedDeck=null,validated=false,runIndex=0,runSteps=[],dragItem=null,dragMove=null,dragCommandId=null,dropIndex=null,dropAfter=false;
+let method=[],selected=-1,deck=Array.from({length:10},()=>null),selectedDeck=null,validated=false,runIndex=0,runSteps=[],dragItem=null,dragMove=null,dragCommandId=null,dropIndex=null,dropAfter=false;let simulationPlaying=false,simulationBusy=false,simulationRunId=0,simulationTimer=null,mountedSimulationChannels={};
 function log(s){$("log").innerHTML+=`<br>${new Date().toLocaleTimeString()} ${s}`;$("log").scrollTop=$("log").scrollHeight}
 function getLabwareItems(){return deck.flatMap((c,pos)=>c?c.items.map((x,site)=>x?{...x,pos,site,carrier:c.name}:null).filter(Boolean):[])}
 function getLabwareLabels(){return getLabwareItems().map(x=>x.label)}
@@ -270,6 +270,16 @@ function updateDeckSelectionHighlight(){
   el.classList.toggle("selected-labware",!!chosen);
  });
 }
+function renderMiniWells(element,item){
+ const layout=wellLayout({...item,carrier:deck.find(c=>c&&c.items.includes(item))?.name});
+ if(layout.kind==="single")return;
+ const label=document.createElement("span");label.className="labware-label";label.textContent=item.label;element.append(label);
+ const grid=document.createElement("span");grid.className="mini-wells";grid.style.gridTemplateColumns="repeat("+layout.cols+",4px)";
+ for(let r=0;r<layout.rows;r++)for(let c=0;c<layout.cols;c++){
+  const dot=document.createElement("i");dot.className="mini-well";dot.dataset.well=layout.kind==="plate"?String.fromCharCode(65+r)+(c+1):String(r+1);grid.append(dot);
+ }
+ element.append(grid);
+}
 function renderDeck(){
  const d=$("deck");d.innerHTML="";
  deck.forEach((c,i)=>{
@@ -366,8 +376,8 @@ function renderDeck(){
      }
     });
     if(item){
-     z.className="labware "+(colors[item.name]||"blue");z.dataset.deckPos=i;z.dataset.carrierSite=j;
-     z.textContent=item.label;z.draggable=true;
+     z.className="labware "+(colors[item.name]||"blue");z.dataset.deckPos=i;z.dataset.carrierSite=j;z.dataset.label=item.label;
+     if(item.name.startsWith("96 Well Microplate")||item.name==="Trough 100ml"||item.name.startsWith("DiTi")||deck[i].name==="Tube 13mm 16 Pos")renderMiniWells(z,item);else z.textContent=item.label;z.draggable=true;
      z.title=item.name+" — drag to move; click to inspect";
      z.addEventListener("dragstart",e=>{
       dragItem=null;dragMove={kind:"labware",fromPos:i,fromSite:j};
@@ -390,7 +400,74 @@ function renderDeck(){
   }
   d.append(site);
  });
+ const overlay=document.createElementNS("http://www.w3.org/2000/svg","svg");
+ overlay.setAttribute("class","simulation-arm-layer");overlay.setAttribute("viewBox","0 0 "+d.scrollWidth+" "+d.scrollHeight);overlay.setAttribute("preserveAspectRatio","none");
+ overlay.innerHTML='<line x1="12" y1="16" x2="'+(d.scrollWidth-12)+'" y2="16" stroke="#526477" stroke-width="7" stroke-linecap="round" opacity=".8"/><g id="simulationArmCarriage" class="simulation-arm-carriage" transform="translate(30 0)"><rect x="-31" y="9" width="62" height="16" rx="4" fill="#344c62" stroke="#182c3d" stroke-width="1.5"/><circle cx="0" cy="17" r="4" fill="#f0c94e"/><line id="simulationArmVertical" x1="0" y1="25" x2="0" y2="95" stroke="#344c62" stroke-width="6" stroke-linecap="round"/><g id="simulationArmTips" class="simulation-arm-tip" transform="translate(0 95)"></g></g>';
+ d.append(overlay);updateSimulationArmTips();
  showDeckInfo();
+}
+function updateSimulationArmTips(){
+ const group=$("simulationArmTips");if(!group)return;
+ const channels=Object.keys(mountedSimulationChannels).map(Number).sort((a,b)=>a-b);
+ group.innerHTML=channels.map(ch=>{const x=(ch-4.5)*7;return '<line x1="'+x+'" y1="0" x2="'+x+'" y2="24" stroke="#2877b8" stroke-width="3" stroke-linecap="round"/><path d="M'+(x-2)+' 24 L'+x+' 30 L'+(x+2)+' 24" fill="none" stroke="#2877b8" stroke-width="1.5"/>';}).join("");
+ $("simTipState").textContent=channels.length?"Tips mounted: channels "+channels.join(", "):"Tips: none mounted";
+}
+function clearSimulationHighlight(){
+ document.querySelectorAll("#deck .simulation-target").forEach(el=>el.classList.remove("simulation-target"));
+ document.querySelectorAll("#deck .mini-well.active").forEach(el=>el.classList.remove("active"));
+ document.querySelectorAll("#script .simulation-current").forEach(el=>el.classList.remove("simulation-current"));
+}
+function moveSimulationArm(label,wells=[]){
+ const d=$("deck"),carriage=$("simulationArmCarriage"),vertical=$("simulationArmVertical"),tips=$("simulationArmTips");
+ if(!d||!carriage)return Promise.resolve();
+ clearSimulationHighlight();
+ const target=[...d.querySelectorAll(".labware")].find(el=>el.dataset.label===label);
+ if(!target){$("simAction").textContent=label?"Cannot locate "+label+" on the worktable.":"No labware movement for this command.";return Promise.resolve()}
+ target.classList.add("simulation-target");
+ let anchor=target;
+ if(wells&&wells.length){
+  const dots=[...target.querySelectorAll(".mini-well")];
+  dots.forEach(dot=>{if(wells.includes(dot.dataset.well))dot.classList.add("active")});
+  const first=dots.find(dot=>dot.dataset.well===wells[0]);if(first)anchor=first;
+ }
+ const deckRect=d.getBoundingClientRect(),rect=anchor.getBoundingClientRect();
+ const x=rect.left+rect.width/2-deckRect.left,y=rect.top+rect.height/2-deckRect.top;
+ carriage.setAttribute("transform","translate("+x+" 0)");
+ vertical.setAttribute("y2",Math.max(55,y-10));
+ tips.setAttribute("transform","translate(0 "+y+")");
+ return new Promise(resolve=>setTimeout(resolve,760));
+}
+function commandTarget(command){
+ const p=command.params||{};
+ if(command.name==="Get DiTi")return getLabwareItems().find(x=>x.name===p.tips)?.label||"";
+ if(command.name==="Drop DiTi")return p.waste||"";
+ if(command.name==="Aspirate")return p.source||"";
+ if(command.name==="Dispense")return p.destination||"";
+ if(command.name==="Mix")return p.target||"";
+ return "";
+}
+function commandWells(command){return ["Aspirate","Dispense","Mix"].includes(command.name)?(command.params.wells||[]):[]}
+function describeSimulationCommand(command){
+ const p=command.params||{},channels=selectedChannels(p);
+ if(command.name==="Get DiTi")return "Picking up "+(p.tips||"disposable")+" tips on channels "+channels.join(", ")+".";
+ if(command.name==="Drop DiTi")return "Dropping tips from channels "+channels.join(", ")+" into "+(p.waste||"the selected waste container")+".";
+ if(command.name==="Aspirate")return "Aspirating "+p.volume+" µL from "+p.source+" at "+(p.wells||[]).join(", ")+".";
+ if(command.name==="Dispense")return "Dispensing "+p.volume+" µL into "+p.destination+" at "+(p.wells||[]).join(", ")+".";
+ if(command.name==="Mix")return "Mixing "+p.target+" at "+(p.wells||[]).join(", ")+" for "+p.cycles+" cycles.";
+ return command.name+" — "+Object.entries(p).filter(([k])=>k!=="loopOptions").map(([k,v])=>k+": "+(Array.isArray(v)?v.join(", "):v)).join("; ");
+}
+async function executeSimulationCommand(command,token){
+ const label=commandTarget(command),wells=commandWells(command);
+ $("simAction").textContent=describeSimulationCommand(command);
+ if(label)await moveSimulationArm(label,wells);
+ if(token!==simulationRunId)return;
+ if(command.name==="Get DiTi")selectedChannels(command.params).forEach(ch=>mountedSimulationChannels[ch]=command.params.tips);
+ if(command.name==="Drop DiTi")selectedChannels(command.params).forEach(ch=>delete mountedSimulationChannels[ch]);
+ updateSimulationArmTips();
+ if(command.name==="Mix"){
+  const target=[...$("deck").querySelectorAll(".simulation-target")][0];
+  if(target){target.classList.add("mixing");await new Promise(resolve=>setTimeout(resolve,350));target.classList.remove("mixing")}
+ }
 }
 function showDeckInfo(){
  updateDeckSelectionHighlight();
@@ -466,11 +543,47 @@ function validate(){
  $("run").disabled=!validated;$("stepRun").disabled=!validated;
  log(validated?"METHOD READY":"VALIDATION ERRORS FOUND");
 }
-function prepareRun(){runSteps=["Initialize method","Check carrier and labware positions",...method.map((c,i)=>`Execute command ${i+1}: ${c.name}`),"Method complete"];runIndex=0;$("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent="STATUS: READY TO RUN";$("stepRun").disabled=false}
-function nextStep(){if(!validated)return;if(runIndex>=runSteps.length){$("stepRun").disabled=true;return}let s=runSteps[runIndex++];log(s.toUpperCase());$("runFeedback").textContent=s;$("progress").style.width=(runIndex/runSteps.length*100)+"%";$("percent").textContent=Math.round(runIndex/runSteps.length*100)+"%";$("status").textContent=runIndex===runSteps.length?"STATUS: SIMULATION COMPLETE":"STATUS: RUNNING";if(runIndex===runSteps.length)$("stepRun").disabled=true}
+function prepareRun(){
+ simulationRunId++;simulationPlaying=false;simulationBusy=false;clearTimeout(simulationTimer);runIndex=0;mountedSimulationChannels={};updateSimulationArmTips();clearSimulationHighlight();
+ $("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent="STATUS: READY TO RUN";$("runFeedback").textContent="Simulation ready. Commands will execute in Script Editor order.";
+ $("stepRun").disabled=!method.length;$("pauseRun").hidden=true;$("run").textContent="▶ Run simulation";
+}
+async function nextStep(){
+ if(!validated||simulationBusy||runIndex>=method.length)return;
+ simulationBusy=true;$("stepRun").disabled=true;
+ const token=simulationRunId,index=runIndex,command=method[index];
+ selected=index;
+ const rows=[...$("script").querySelectorAll(".command")];rows.forEach((row,i)=>row.classList.toggle("simulation-current",i===index));
+ if(rows[index])rows[index].scrollIntoView({block:"nearest",behavior:"smooth"});
+ $("status").textContent="STATUS: RUNNING";$("runFeedback").textContent="Command "+(index+1)+": "+command.name;
+ log("COMMAND "+(index+1)+": "+command.name.toUpperCase());
+ await executeSimulationCommand(command,token);
+ if(token!==simulationRunId)return;
+ runIndex++;
+ $("progress").style.width=(runIndex/method.length*100)+"%";$("percent").textContent=Math.round(runIndex/method.length*100)+"%";
+ simulationBusy=false;
+ if(runIndex>=method.length){
+  simulationPlaying=false;$("status").textContent="STATUS: SIMULATION COMPLETE";$("runFeedback").textContent="All "+method.length+" commands have been simulated.";
+  $("simAction").textContent="Method simulation complete.";log("SIMULATION COMPLETE");$("stepRun").disabled=true;$("pauseRun").hidden=true;$("run").textContent="↻ Run again";$("run").disabled=false;return;
+ }
+ $("stepRun").disabled=simulationPlaying;
+ if(simulationPlaying)simulationTimer=setTimeout(()=>nextStep(),420);
+ else $("status").textContent="STATUS: PAUSED AFTER COMMAND "+runIndex;
+}
+function startOrResumeSimulation(){
+ if(!validated)validate();if(!validated)return;
+ if(runIndex===0||runIndex>=method.length)prepareRun();
+ simulationPlaying=true;$("pauseRun").hidden=false;$("stepRun").disabled=true;$("run").textContent="▶ Running...";$("run").disabled=true;$("status").textContent="STATUS: RUNNING";
+ if(!simulationBusy)nextStep();
+}
+function pauseSimulation(){
+ simulationPlaying=false;clearTimeout(simulationTimer);$("pauseRun").hidden=true;$("run").disabled=false;$("run").textContent="▶ Resume simulation";
+ $("stepRun").disabled=simulationBusy||runIndex>=method.length;
+ if(!simulationBusy&&runIndex<method.length)$("status").textContent="STATUS: PAUSED";
+}
 $("tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("tabs").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));renderLibrary(b.dataset.tab)});
 $("script").addEventListener("dragover",e=>{if(!dragCommandId)e.preventDefault()});$("script").addEventListener("drop",e=>{if(dragCommandId)return;e.preventDefault();if(dragItem?.kind==="command"){addCommand(dragItem.name);dragItem=null}});
-$("validate").onclick=validate;$("run").onclick=()=>{if(!validated)validate();if(validated){prepareRun();while(runIndex<runSteps.length)nextStep()}};$("stepRun").onclick=nextStep;$("resetRun").onclick=()=>{$("validationPanel").classList.remove("visible");runIndex=0;$("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent=validated?"STATUS: READY":"STATUS: NOT VALIDATED";$("stepRun").disabled=!validated;$("log").innerHTML="SIMULATION RESET"};
+$("validate").onclick=validate;$("run").onclick=startOrResumeSimulation;$("pauseRun").onclick=pauseSimulation;$("stepRun").onclick=()=>{if(runIndex===0||runIndex>=method.length)prepareRun();simulationPlaying=false;$("pauseRun").hidden=true;$("run").disabled=false;$("run").textContent="▶ Run simulation";nextStep()};$("resetRun").onclick=()=>{simulationRunId++;simulationPlaying=false;simulationBusy=false;clearTimeout(simulationTimer);$("validationPanel").classList.remove("visible");runIndex=0;mountedSimulationChannels={};updateSimulationArmTips();clearSimulationHighlight();$("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent=validated?"STATUS: READY":"STATUS: NOT VALIDATED";$("stepRun").disabled=!validated;$("pauseRun").hidden=true;$("run").disabled=!validated;$("run").textContent="▶ Run simulation";$("simAction").textContent="Simulation reset. Ready to run again.";$("log").innerHTML="SIMULATION RESET"};
 renderLibrary("Commands");renderMethod();renderDeck();$("run").disabled=true;$("stepRun").disabled=true;
 })();
 </script>
