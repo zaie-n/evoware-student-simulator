@@ -25,6 +25,9 @@ assert.ok(html.includes('z.draggable=true'), "Placed labware must be draggable")
 assert.ok(html.includes('moveCarrierOnDeck(dragMove.fromPos,i)'), "Worktable must support moving or swapping whole carriers");
 assert.ok(html.includes('moveLabwareOnDeck(dragMove.fromPos,dragMove.fromSite,i,j)'), "Worktable must support moving or swapping individual labware");
 assert.ok(html.includes("EvoWareValidator.validateMethod(method,deck,carrierTypes)"), "Validate button must call the extracted validator");
+assert.ok(html.indexOf('<section class="panel validation-panel" id="validationPanel">') < html.indexOf('<div class="topgrid">'), "Validation results panel must appear above the main editor/worktable");
+assert.ok(html.includes(".validation-panel{margin:0 0 9px;display:none}.validation-panel.visible{display:block}"), "Validation results panel must be hidden by default");
+assert.ok(html.includes('$("validationPanel").classList.add("visible");'), "Clicking Validate must reveal the validation results panel");
 assert.ok(html.includes('select("waste","DiTi Waste to use",wastes,c.params.waste)'), "Drop DiTi properties must include a DiTi waste selector");
 assert.ok(html.includes('"Drop DiTi":{channels:[1,2,3,4,5,6,7,8],waste:""}'), "Drop DiTi must start with an explicit unselected waste value");
 assert.ok(html.includes('row.setAttribute("role","button")'), "Command-specific findings must be selectable");
