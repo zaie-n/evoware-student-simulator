@@ -607,6 +607,11 @@ function pauseSimulation(){
  $("stepRun").disabled=simulationBusy||runIndex>=runSteps.length;
  if(!simulationBusy&&runIndex<runSteps.length)$("status").textContent="STATUS: PAUSED";
 }
+$("tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("tabs").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));renderLibrary(b.dataset.tab)});
+$("script").addEventListener("dragover",e=>{if(!dragCommandId)e.preventDefault()});$("script").addEventListener("drop",e=>{if(dragCommandId)return;e.preventDefault();if(dragItem?.kind==="command"){addCommand(dragItem.name);dragItem=null}});
+$("validate").onclick=validate;$("run").onclick=startOrResumeSimulation;$("pauseRun").onclick=pauseSimulation;
+$("stepRun").onclick=()=>{if(runIndex===0||runIndex>=runSteps.length)prepareRun();simulationPlaying=false;$("pauseRun").hidden=true;$("run").disabled=false;$("run").textContent="▶ Run simulation";nextStep()};
+$("resetRun").onclick=()=>{simulationRunId++;simulationPlaying=false;simulationBusy=false;clearTimeout(simulationTimer);$("validationPanel").classList.remove("visible");runIndex=0;runSteps=[];mountedSimulationChannels={};updateSimulationArmTips();clearSimulationHighlight();$("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent=validated?"STATUS: READY":"STATUS: NOT VALIDATED";$("stepRun").disabled=!validated;$("pauseRun").hidden=true;$("run").disabled=!validated;$("run").textContent="▶ Run simulation";$("simAction").textContent="Simulation reset. Ready to run again.";$("log").innerHTML="SIMULATION RESET"};
 renderLibrary("Commands");renderMethod();renderDeck();$("run").disabled=true;$("stepRun").disabled=true;
 })();
 </script>
