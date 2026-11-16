@@ -543,15 +543,36 @@ function validate(){
  $("run").disabled=!validated;$("stepRun").disabled=!validated;
  log(validated?"METHOD READY":"VALIDATION ERRORS FOUND");
 }
+function buildExecutionPlan(){
+ const endForBegin=new Map(),stack=[];
+ method.forEach((command,index)=>{
+  if(command.name==="Begin Loop")stack.push(index);
+  else if(command.name==="End Loop"&&stack.length){endForBegin.set(stack.pop(),index)}
+ });
+ const plan=[];
+ const appendRange=(from,to,path=[])=>{
+  for(let i=from;i<to;i++){
+   const command=method[i];
+   if(command.name==="Begin Loop"&&endForBegin.has(i)){
+    const end=endForBegin.get(i),cycles=Math.max(1,Math.floor(Number(command.params.cycles)||1));
+    plan.push({commandIndex:i,loopPath:path,loopBoundary:"begin"});
+    for(let cycle=1;cycle<=cycles;cycle++)appendRange(i+1,end,[...path,{name:command.params.loopName||"Loop",cycle,total:cycles}]);
+    plan.push({commandIndex:end,loopPath:path,loopBoundary:"end"});i=end;
+   }else plan.push({commandIndex:i,loopPath:path});
+  }
+ };
+ appendRange(0,method.length);
+ return plan;
+}
 function prepareRun(){
- simulationRunId++;simulationPlaying=false;simulationBusy=false;clearTimeout(simulationTimer);runIndex=0;mountedSimulationChannels={};updateSimulationArmTips();clearSimulationHighlight();
- $("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent="STATUS: READY TO RUN";$("runFeedback").textContent="Simulation ready. Commands will execute in Script Editor order.";
- $("stepRun").disabled=!method.length;$("pauseRun").hidden=true;$("run").textContent="▶ Run simulation";
+ simulationRunId++;simulationPlaying=false;simulationBusy=false;clearTimeout(simulationTimer);runIndex=0;runSteps=buildExecutionPlan();mountedSimulationChannels={};updateSimulationArmTips();clearSimulationHighlight();
+ $("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent="STATUS: READY TO RUN";$("runFeedback").textContent="Simulation ready. "+runSteps.length+" execution steps, including loop iterations.";
+ $("stepRun").disabled=!runSteps.length;$("pauseRun").hidden=true;$("run").textContent="▶ Run simulation";
 }
 async function nextStep(){
- if(!validated||simulationBusy||runIndex>=method.length)return;
+ if(!validated||simulationBusy||runIndex>=runSteps.length)return;
  simulationBusy=true;$("stepRun").disabled=true;
- const token=simulationRunId,index=runIndex,command=method[index];
+ const token=simulationRunId,step=runSteps[runIndex],index=step.commandIndex,command=method[index];
  selected=index;
  const rows=[...$("script").querySelectorAll(".command")];rows.forEach((row,i)=>row.classList.toggle("simulation-current",i===index));
  if(rows[index]){
@@ -559,35 +580,33 @@ async function nextStep(){
   if(rowRect.top<panelRect.top)scriptPanel.scrollTop-=panelRect.top-rowRect.top+6;
   else if(rowRect.bottom>panelRect.bottom)scriptPanel.scrollTop+=rowRect.bottom-panelRect.bottom+6;
  }
- $("status").textContent="STATUS: RUNNING";$("runFeedback").textContent="Command "+(index+1)+": "+command.name;
- log("COMMAND "+(index+1)+": "+command.name.toUpperCase());
+ const iteration=step.loopPath.length?" ("+step.loopPath.map(x=>x.name+" "+x.cycle+"/"+x.total).join(" › ")+")":"";
+ $("status").textContent="STATUS: RUNNING";$("runFeedback").textContent="Command "+(index+1)+iteration+": "+command.name;
+ log("COMMAND "+(index+1)+": "+command.name.toUpperCase()+iteration);
  await executeSimulationCommand(command,token);
  if(token!==simulationRunId)return;
  runIndex++;
- $("progress").style.width=(runIndex/method.length*100)+"%";$("percent").textContent=Math.round(runIndex/method.length*100)+"%";
+ $("progress").style.width=(runIndex/runSteps.length*100)+"%";$("percent").textContent=Math.round(runIndex/runSteps.length*100)+"%";
  simulationBusy=false;
- if(runIndex>=method.length){
-  simulationPlaying=false;$("status").textContent="STATUS: SIMULATION COMPLETE";$("runFeedback").textContent="All "+method.length+" commands have been simulated.";
+ if(runIndex>=runSteps.length){
+  simulationPlaying=false;$("status").textContent="STATUS: SIMULATION COMPLETE";$("runFeedback").textContent="All "+runSteps.length+" execution steps have been simulated, including loop iterations.";
   $("simAction").textContent="Method simulation complete.";log("SIMULATION COMPLETE");$("stepRun").disabled=true;$("pauseRun").hidden=true;$("run").textContent="↻ Run again";$("run").disabled=false;return;
  }
  $("stepRun").disabled=simulationPlaying;
  if(simulationPlaying)simulationTimer=setTimeout(()=>nextStep(),420);
- else $("status").textContent="STATUS: PAUSED AFTER COMMAND "+runIndex;
+ else $("status").textContent="STATUS: PAUSED AFTER EXECUTION STEP "+runIndex;
 }
 function startOrResumeSimulation(){
  if(!validated)validate();if(!validated)return;
- if(runIndex===0||runIndex>=method.length)prepareRun();
+ if(runIndex===0||runIndex>=runSteps.length)prepareRun();
  simulationPlaying=true;$("pauseRun").hidden=false;$("stepRun").disabled=true;$("run").textContent="▶ Running...";$("run").disabled=true;$("status").textContent="STATUS: RUNNING";
  if(!simulationBusy)nextStep();
 }
 function pauseSimulation(){
  simulationPlaying=false;clearTimeout(simulationTimer);$("pauseRun").hidden=true;$("run").disabled=false;$("run").textContent="▶ Resume simulation";
- $("stepRun").disabled=simulationBusy||runIndex>=method.length;
- if(!simulationBusy&&runIndex<method.length)$("status").textContent="STATUS: PAUSED";
+ $("stepRun").disabled=simulationBusy||runIndex>=runSteps.length;
+ if(!simulationBusy&&runIndex<runSteps.length)$("status").textContent="STATUS: PAUSED";
 }
-$("tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("tabs").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));renderLibrary(b.dataset.tab)});
-$("script").addEventListener("dragover",e=>{if(!dragCommandId)e.preventDefault()});$("script").addEventListener("drop",e=>{if(dragCommandId)return;e.preventDefault();if(dragItem?.kind==="command"){addCommand(dragItem.name);dragItem=null}});
-$("validate").onclick=validate;$("run").onclick=startOrResumeSimulation;$("pauseRun").onclick=pauseSimulation;$("stepRun").onclick=()=>{if(runIndex===0||runIndex>=method.length)prepareRun();simulationPlaying=false;$("pauseRun").hidden=true;$("run").disabled=false;$("run").textContent="▶ Run simulation";nextStep()};$("resetRun").onclick=()=>{simulationRunId++;simulationPlaying=false;simulationBusy=false;clearTimeout(simulationTimer);$("validationPanel").classList.remove("visible");runIndex=0;mountedSimulationChannels={};updateSimulationArmTips();clearSimulationHighlight();$("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent=validated?"STATUS: READY":"STATUS: NOT VALIDATED";$("stepRun").disabled=!validated;$("pauseRun").hidden=true;$("run").disabled=!validated;$("run").textContent="▶ Run simulation";$("simAction").textContent="Simulation reset. Ready to run again.";$("log").innerHTML="SIMULATION RESET"};
 renderLibrary("Commands");renderMethod();renderDeck();$("run").disabled=true;$("stepRun").disabled=true;
 })();
 </script>
