@@ -31,8 +31,12 @@ assert.ok(html.includes('z.draggable=true'), "Placed labware must be draggable")
 assert.ok(html.includes('moveCarrierOnDeck(dragMove.fromPos,i)'), "Worktable must support moving or swapping whole carriers");
 assert.ok(html.includes('moveLabwareOnDeck(dragMove.fromPos,dragMove.fromSite,i,j)'), "Worktable must support moving or swapping individual labware");
 assert.ok(html.includes("EvoWareValidator.validateMethod(method,deck,carrierTypes)"), "Validate button must call the extracted validator");
-assert.ok(html.indexOf('<section class="panel validation-panel" id="validationPanel">') < html.indexOf('<div class="topgrid">'), "Validation results panel must appear above the main editor/worktable");
-assert.ok(html.includes(".validation-panel{margin:0 0 9px;display:none}.validation-panel.visible{display:block}"), "Validation results panel must be hidden by default");
+assert.ok(html.indexOf('<section class="panel workpanel">') < html.indexOf('<section class="panel simulation-controls-panel">') && html.indexOf('<section class="panel simulation-controls-panel">') < html.indexOf('<div class="lower">'), "Simulation controls must sit below the worktable and above the lower panels");
+assert.ok(html.indexOf('<section class="panel validation-panel" id="validationPanel">') > html.indexOf('<div class="lower">') && html.indexOf('<section class="panel validation-panel" id="validationPanel">') < html.indexOf('<section class="panel"><div class="phead">Execution Log</div>'), "Validation Results must replace Method Execution beside the Execution Log");
+assert.ok(!html.includes('<div class="phead">Method Execution</div>'), "The old Method Execution panel must be removed");
+assert.ok(html.includes(".validation-panel{margin:0;display:block;visibility:hidden;height:0;overflow:hidden;border:0}.validation-panel.visible{visibility:visible;height:auto;border:1px solid #aeb9c4}"), "Validation Results must reserve its lower-panel position but remain invisible until validation");
+assert.ok(!html.includes('id="validate" class="primary"') && html.includes('id="validate" class="btn primary"'), "Validate must be moved into the controls below the worktable");
+assert.ok(!html.includes('rows[index].scrollIntoView'), "Automatic command highlighting must not scroll the whole page during simulation");
 assert.ok(html.includes('$("validationPanel").classList.add("visible");'), "Clicking Validate must reveal the validation results panel");
 assert.ok(html.includes('$("resetRun").onclick=()=>{simulationRunId++;') && html.includes('$("validationPanel").classList.remove("visible");'), "Reset Run must cancel execution and hide the validation results panel");
 assert.ok(html.includes('select("waste","DiTi Waste to use",wastes,c.params.waste)'), "Drop DiTi properties must include a DiTi waste selector");
