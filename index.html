@@ -504,8 +504,18 @@ async function waitForNamedTimer(timerName,token){
  if(token!==simulationRunId)return;
  log("TIMER COMPLETE: "+timerName);
 }
-async function executeSimulationCommand(command,token,loopPath=[]){
- const activeCommand=applyLoopWellOffsets(command,loopPath);
+async function executeSimulationCommand(command,token,loopPath=[],sampleChannels=null){
+ const simulatedCommand={...command,params:{...(command.params||{})}};
+ if(Array.isArray(sampleChannels)&&["Get DiTi","Drop DiTi","Aspirate","Dispense","Mix"].includes(command.name)){
+  const originalChannels=selectedChannels(command.params||{});
+  const keep=new Set(sampleChannels);
+  simulatedCommand.params.channels=originalChannels.filter(ch=>keep.has(ch));
+  if(["Aspirate","Dispense","Mix"].includes(command.name)){
+   const indexedWells=(command.params.wells||[]).map((well,index)=>({well,index,channel:originalChannels[index]}));
+   simulatedCommand.params.wells=indexedWells.filter(x=>keep.has(x.channel)).map(x=>x.well);
+  }
+ }
+ const activeCommand=applyLoopWellOffsets(simulatedCommand,loopPath);
  const label=commandTarget(activeCommand),wells=commandWells(activeCommand);
  $("simAction").textContent=describeSimulationCommand(activeCommand);
  if(wells.includes("OUT OF RANGE"))$("simAction").textContent+=" Loop advance exceeds the available labware positions.";
@@ -608,19 +618,52 @@ function buildExecutionPlan(){
   if(raw!==""&&Number.isFinite(Number(raw)))return Number(raw);
   return Object.prototype.hasOwnProperty.call(variables,raw)?variables[raw]:NaN;
  };
- const appendRange=(from,to,path=[])=>{
+ const sampleChannelsInRange=(from,to)=>{
+  const used=new Set();
+  for(let i=from;i<to;i++){
+   const c=method[i];
+   if(["Get DiTi","Drop DiTi","Aspirate","Dispense","Mix"].includes(c.name))
+    selectedChannels(c.params||{}).forEach(ch=>used.add(ch));
+  }
+  return [...used].sort((a,b)=>a-b);
+ };
+ const appendRange=(from,to,path=[],sampleMask=null)=>{
   for(let i=from;i<to;i++){
    const command=method[i],params=command.params||{};
    if(command.name==="Begin Loop"&&endForBegin.has(i)){
-    const end=endForBegin.get(i),resolved=resolveValue(params.cycles),cycles=Math.max(1,Math.floor(Number.isFinite(resolved)?resolved:1));
-    plan.push({commandIndex:i,loopPath:path,loopBoundary:"begin"});
-    for(let cycle=1;cycle<=cycles;cycle++)appendRange(i+1,end,[...path,{name:params.loopName||"Loop",cycle,total:cycles}]);
-    plan.push({commandIndex:end,loopPath:path,loopBoundary:"end"});i=end;
+    const end=endForBegin.get(i),loopName=params.loopName||"Loop";
+    const rawCycles=String(params.cycles??"").trim();
+    if(rawCycles.toUpperCase()==="SAMPLE_CNT"){
+     const requested=Math.max(0,Math.floor(Number(variables.SAMPLE_CNT)||0));
+     const usedChannels=sampleChannelsInRange(i+1,end);
+     const tipsPerCycle=usedChannels.length;
+     if(requested>0&&tipsPerCycle>0){
+      const total=Math.ceil(requested/tipsPerCycle);
+      plan.push({commandIndex:i,loopPath:path,loopBoundary:"begin",sampleCount:requested,tipsPerCycle});
+      let remaining=requested;
+      for(let cycle=1;cycle<=total;cycle++){
+       const activeChannels=usedChannels.slice(0,Math.min(tipsPerCycle,remaining));
+       appendRange(i+1,end,[...path,{name:loopName,cycle,total,sampleRemaining:remaining}],activeChannels);
+       remaining=Math.max(0,remaining-tipsPerCycle);
+      }
+      variables.SAMPLE_CNT=0;
+      plan.push({commandIndex:end,loopPath:path,loopBoundary:"end",sampleCountRemaining:0});
+     }else{
+      plan.push({commandIndex:i,loopPath:path,loopBoundary:"begin",sampleCount:requested,tipsPerCycle});
+      plan.push({commandIndex:end,loopPath:path,loopBoundary:"end",sampleCountRemaining:requested});
+     }
+    }else{
+     const resolved=resolveValue(rawCycles),cycles=Math.max(1,Math.floor(Number.isFinite(resolved)?resolved:1));
+     plan.push({commandIndex:i,loopPath:path,loopBoundary:"begin"});
+     for(let cycle=1;cycle<=cycles;cycle++)appendRange(i+1,end,[...path,{name:loopName,cycle,total:cycles}],sampleMask);
+     plan.push({commandIndex:end,loopPath:path,loopBoundary:"end"});
+    }
+    i=end;
    }else{
-    plan.push({commandIndex:i,loopPath:path});
+    plan.push({commandIndex:i,loopPath:path,sampleChannels:sampleMask});
     if(command.name==="Set Variable"){
      const name=String(params.name||"").trim(),value=resolveValue(params.value);
-     if(name&&Number.isFinite(value))variables[name]=value;
+     if(name&&Number.isFinite(value))variables[name.toUpperCase()]=value;
     }
    }
   }
@@ -647,7 +690,7 @@ async function nextStep(){
  const iteration=step.loopPath.length?" ("+step.loopPath.map(x=>x.name+" "+x.cycle+"/"+x.total).join(" › ")+")":"";
  $("status").textContent="STATUS: RUNNING";$("runFeedback").textContent="Command "+(index+1)+iteration+": "+command.name;
  log("COMMAND "+(index+1)+": "+command.name.toUpperCase()+iteration);
- await executeSimulationCommand(command,token,step.loopPath);
+ await executeSimulationCommand(command,token,step.loopPath,step.sampleChannels);
  if(token!==simulationRunId)return;
  runIndex++;
  $("progress").style.width=(runIndex/runSteps.length*100)+"%";$("percent").textContent=Math.round(runIndex/runSteps.length*100)+"%";
