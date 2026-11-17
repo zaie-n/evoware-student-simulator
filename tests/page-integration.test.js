@@ -90,8 +90,8 @@ assert.equal(resetSamplePlan.filter(step=>step.commandIndex===7).length,2,"Reass
 
 
 
-assert.ok(html.includes('input("value","Numeric value or existing variable name"'), "Set Variable must accept a custom numeric value or a variable reference");
-assert.ok(html.includes('input("cycles","Loop cycles (use SAMPLE_CNT for sample-aware looping)"'), "Begin Loop must accept a variable name such as SAMPLE_CNT");
+assert.ok(html.includes('input("value","Value or arithmetic expression"'), "Set Variable must accept a custom numeric value or a variable reference");
+assert.ok(html.includes('input("cycles","Loop cycles"'), "Begin Loop must accept a variable name such as SAMPLE_CNT");
 assert.ok(html.includes('resolved=resolveValue(rawCycles)'), "Execution planning must resolve variable-driven loop counts");
 assert.ok(html.includes('variables[name.toUpperCase()]=value'), "Set Variable must update the variable environment used by subsequent loops");
 assert.ok(html.includes("for(let cycle=1;cycle<=cycles;cycle++){"), "Loop cycles must repeat the commands inside the matching loop");
@@ -159,9 +159,9 @@ assert.ok(html.includes('["SAMPLE_CNT","Custom Variable"]'), "Set Variable shoul
 assert.ok(html.includes('password!=="purify"'), "Premade bead-cleanup templates should require the instructor password");
 assert.ok(html.includes('waste-stream-symbol'), "DiTi Waste should render as a waste-stream outline, not a channel bank");
 const expressionStart = html.indexOf("function evaluateNumericExpression");
-const expressionEnd = html.indexOf("\\nfunction addChannelPicker", expressionStart);
+const expressionEnd = html.indexOf("\nfunction addChannelPicker", expressionStart);
 assert.ok(expressionStart >= 0 && expressionEnd > expressionStart, "Arithmetic expression evaluator should be present");
-const evaluateExpression = new Function(html.slice(expressionStart, expressionEnd) + "\\nreturn evaluateNumericExpression;")();
+const evaluateExpression = new Function(html.slice(expressionStart, expressionEnd) + "\nreturn evaluateNumericExpression;")();
 assert.equal(evaluateExpression("SAMPLE_CNT*4", {SAMPLE_CNT:4}), 16, "Arithmetic should resolve variables in numeric fields");
 assert.equal(evaluateExpression("(SAMPLE_CNT+2)/2", {SAMPLE_CNT:4}), 3, "Arithmetic should support precedence and parentheses");
 assert.ok(html.includes('target.scrollIntoView({block:"nearest",behavior:"smooth"})'), "Selecting a finding must scroll its command into view");
