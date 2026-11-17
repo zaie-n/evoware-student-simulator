@@ -466,11 +466,11 @@ function applyLoopWellOffsets(command,loopPath){
  const shifted=(p.wells||[]).map(well=>{
   let row=0,column=0;
   if(layout.kind==="plate"){
-   const match=/^([A-Z]+)(\\d+)$/i.exec(String(well));if(!match)return well;
+   const match=/^([A-Z]+)(\d+)$/i.exec(String(well));if(!match)return well;
    row=match[1].toUpperCase().split("").reduce((n,ch)=>n*26+ch.charCodeAt(0)-64,0)-1;
    column=Number(match[2])-1;
   }else{
-   const match=/^(\\d+)$/.exec(String(well));if(!match)return well;
+   const match=/^(\d+)$/.exec(String(well));if(!match)return well;
    row=Number(match[1])-1;
   }
   row+=rowShift;column+=columnShift;
