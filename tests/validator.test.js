@@ -389,6 +389,21 @@ test("commands validate after the user manually selects the renamed labware name
     JSON.stringify(errors(findings), null, 2));
 });
 
+test("Wait for Timer validates the shared timerName property", () => {
+  const valid = findingsFor([
+    { name: "Start Timer", params: { timerName: "bead_mix", seconds: 30 } },
+    { name: "Wait for Timer", params: { timerName: "bead_mix" } }
+  ]);
+  assert.equal(errors(valid).length, 0, JSON.stringify(errors(valid), null, 2));
+
+  const missing = findingsFor([
+    { name: "Start Timer", params: { timerName: "bead_mix", seconds: 30 } },
+    { name: "Wait for Timer", params: { timerName: "" } }
+  ]);
+  assert.equal(hasErrorAt(missing, 2), true);
+  assert.equal(hasMessage(missing, "Specify the timer this command should wait for"), true);
+});
+
 for (const item of tests) {
   try {
     item.fn();
