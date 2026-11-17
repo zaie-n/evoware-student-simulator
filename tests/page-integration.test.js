@@ -47,10 +47,27 @@ const variablePlan = makePlan([
 ]);
 assert.equal(variablePlan.filter(step => step.commandIndex === 3).length, 12, "SAMPLE_CNT must expand the first loop to the user's numeric sample count");
 assert.equal(variablePlan.filter(step => step.commandIndex === 7).length, 3, "Resetting SAMPLE_CNT must change the next loop's iteration count");
+const samplePlan = makePlan([
+  {name:"Set Variable",params:{name:"Num_Samples",value:12}},
+  {name:"Set Variable",params:{name:"SAMPLE_CNT",value:"Num_Samples"}},
+  {name:"Begin Loop",params:{loopName:"Bead pipetting",cycles:"SAMPLE_CNT"}},
+  {name:"Get DiTi",params:{channels:[1,2,3,4,5,6,7,8]}},
+  {name:"Aspirate",params:{channels:[1,2,3,4,5,6,7,8],wells:["A1","B1","C1","D1","E1","F1","G1","H1"]}},
+  {name:"Dispense",params:{channels:[1,2,3,4,5,6,7,8],wells:["A1","B1","C1","D1","E1","F1","G1","H1"]}},
+  {name:"Drop DiTi",params:{channels:[1,2,3,4,5,6,7,8]}},
+  {name:"End Loop",params:{loopName:"Bead pipetting"}}
+]);
+const getTipSteps = samplePlan.filter(step=>step.commandIndex===3);
+const aspirateSteps = samplePlan.filter(step=>step.commandIndex===4);
+assert.equal(getTipSteps.length,2,"12 samples on an 8-channel LiHa must create two loop cycles, not twelve");
+assert.deepEqual(getTipSteps.map(step=>step.sampleChannels.length),[8,4],"The final cycle must select only the remaining four channels");
+assert.deepEqual(aspirateSteps.map(step=>step.sampleChannels.length),[8,4],"All sample-dependent pipetting commands must use the same partial final tip mask");
+assert.deepEqual(aspirateSteps[1].sampleChannels,[1,2,3,4],"The final cycle must retain physical channel identity and use the first four selected tips");
+
 
 assert.ok(html.includes('input("value","Numeric value or existing variable name"'), "Set Variable must accept a custom numeric value or a variable reference");
 assert.ok(html.includes('input("cycles","Loop cycles or variable name"'), "Begin Loop must accept a variable name such as SAMPLE_CNT");
-assert.ok(html.includes('resolved=resolveValue(params.cycles)'), "Execution planning must resolve variable-driven loop counts");
+assert.ok(html.includes('resolved=resolveValue(rawCycles)'), "Execution planning must resolve variable-driven loop counts");
 assert.ok(html.includes('variables[name]=value'), "Set Variable must update the variable environment used by subsequent loops");
 assert.ok(html.includes("for(let cycle=1;cycle<=cycles;cycle++)appendRange(i+1,end"), "Loop cycles must repeat the commands inside the matching loop");
 assert.ok(html.includes("loopPath.map(x=>x.name+\" \"+x.cycle+\"/\"+x.total)"), "Execution feedback must identify the active loop iteration");
