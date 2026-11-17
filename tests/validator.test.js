@@ -404,6 +404,34 @@ test("Wait for Timer validates the shared timerName property", () => {
   assert.equal(hasMessage(missing, "Specify the timer this command should wait for"), true);
 });
 
+test("custom numeric variables can be assigned to SAMPLE_CNT and used as loop counts", () => {
+  const findings = findingsFor([
+    { name: "Set Variable", params: { name: "Num_Samples", value: 12 } },
+    { name: "Set Variable", params: { name: "SAMPLE_CNT", value: "Num_Samples" } },
+    { name: "Begin Loop", params: { loopName: "Bead addition", cycles: "SAMPLE_CNT" } },
+    { name: "User Prompt", params: { message: "Sample operation" } },
+    { name: "End Loop", params: { loopName: "Bead addition" } }
+  ]);
+  assert.equal(errors(findings).length, 0, JSON.stringify(errors(findings), null, 2));
+});
+
+test("variables must be assigned before they are referenced", () => {
+  const findings = findingsFor([
+    { name: "Set Variable", params: { name: "SAMPLE_CNT", value: "Num_Samples" } },
+    { name: "Begin Loop", params: { loopName: "Samples", cycles: "SAMPLE_CNT" } },
+    { name: "End Loop", params: { loopName: "Samples" } }
+  ]);
+  assert.equal(hasErrorAt(findings, 1), true);
+  assert.equal(hasErrorAt(findings, 2), true);
+});
+
+test("Set Variable accepts a numeric custom value", () => {
+  const findings = findingsFor([
+    { name: "Set Variable", params: { name: "Num_Samples", value: 8 } }
+  ]);
+  assert.equal(errors(findings).length, 0, JSON.stringify(errors(findings), null, 2));
+});
+
 for (const item of tests) {
   try {
     item.fn();
