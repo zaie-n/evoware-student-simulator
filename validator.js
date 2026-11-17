@@ -66,6 +66,7 @@
     const liquidVolumeByChannel = {};
     const stack = [];
     const diagnosedUnclosedLoops = new Set();
+    const definedVariables = new Map();
     const add = (severity, command, message) => findings.push({ severity, command, message });
     const hasWorktableCommands = (method || []).some(command =>
       ["Get DiTi", "Drop DiTi", "Aspirate", "Dispense", "Mix"].includes(command.name)
@@ -132,9 +133,13 @@
         if (!loopName) {
           add("error", n, "Enter a descriptive name for this loop. Use the same name in its matching End Loop.");
         }
-        const cycles = Number(p.cycles);
-        if (!Number.isInteger(cycles) || cycles < 1) {
-          add("error", n, "Loop cycles must be a positive whole number.");
+        const cycleValue = String(p.cycles ?? "").trim();
+        const cycles = Number(cycleValue);
+        const isVariable = /^[A-Za-z_][A-Za-z0-9_]*$/.test(cycleValue);
+        if ((!Number.isInteger(cycles) || cycles < 1) && !isVariable) {
+          add("error", n, "Loop cycles must be a positive whole number or the name of a defined numeric variable.");
+        } else if (isVariable && !definedVariables.has(cycleValue)) {
+          add("error", n, "Loop variable " + cycleValue + " has not been assigned a numeric value before this loop.");
         }
       }
 
@@ -364,11 +369,20 @@
         add("error", n, "Specify the timer this command should wait for.");
       }
       if (c.name === "Set Variable") {
-        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(String(p.name || "").trim())) {
+        const variableName = String(p.name || "").trim();
+        const variableValue = String(p.value ?? "").trim();
+        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(variableName)) {
           add("error", n, "Enter a valid variable name (letters, numbers, and underscores; it cannot start with a number).");
         }
-        if (p.value === "" || !Number.isFinite(Number(p.value))) {
-          add("error", n, "Enter a numeric value for this variable.");
+        if (variableValue === "" || (!Number.isFinite(Number(variableValue)) && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(variableValue))) {
+          add("error", n, "Enter a numeric value or the name of an existing numeric variable.");
+        } else if (!Number.isFinite(Number(variableValue)) && !definedVariables.has(variableValue)) {
+          add("error", n, "Variable " + variableValue + " has not been assigned a numeric value before this command.");
+        } else if (variableName === variableValue) {
+          add("error", n, "A variable cannot be assigned from itself before it has a value.");
+        } else {
+          const resolvedValue = Number.isFinite(Number(variableValue)) ? Number(variableValue) : definedVariables.get(variableValue);
+          definedVariables.set(variableName, resolvedValue);
         }
       }
       if (c.name === "If – Then" && !String(p.condition || "").trim()) {
