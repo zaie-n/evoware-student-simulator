@@ -18,7 +18,13 @@ assert.ok(html.includes('"Start Timer":{timerName:"mix_timer",seconds:30}') && h
 assert.ok(html.includes('input("timerName","Timer name"') && html.includes('input("timerName","Timer name to wait for"'), "Start Timer and Wait for Timer must expose their shared timer-name property");
 assert.ok(!html.includes('input("timer","Timer name"'), "Wait for Timer must not show a redundant second timer-name field");
 assert.ok(html.includes('await waitForNamedTimer(String(command.params.timerName||"").trim(),token)'), "Wait for Timer must match the Start Timer name through the single timerName property");
-assert.ok(html.includes('simulationTimers[timerName]={startedAt:Date.now(),durationMs:Math.max(0,Number(activeCommand.params.seconds)||0)*1000}'), "Start Timer must record its named duration and start time");
+assert.ok(html.includes('simulationTimers[timerName]={startedAt:Date.now(),durationMs:Math.max(0,Number(activeCommand.params.seconds)||0)*1000/3}'), "Start Timer must record its named duration at 3× simulation speed");
+assert.ok(html.includes('(" seconds at 3× simulation speed)")'), "Timer log must identify the accelerated simulation rate");
+assert.ok(html.includes('id="simulationPromptBack"') && html.includes('id="simulationPromptMessage"'), "User Prompt must display its message in a dedicated modal popup");
+assert.ok(html.includes('id="simulationPromptContinue"') && html.includes('id="simulationPromptAbort"'), "User Prompt must offer Continue and Abort choices");
+assert.ok(html.includes('await showSimulationPrompt(String(activeCommand.params.message||"Please complete the requested action."),token)'), "User Prompt must pause command execution until the user responds");
+assert.ok(html.includes('if(choice!=="continue"||token!==simulationRunId)return;'), "Aborting a user prompt must prevent the current run from advancing");
+assert.ok(html.includes('STATUS: SIMULATION ABORTED') && html.includes('SIMULATION ABORTED AT USER PROMPT'), "Abort must cancel and reset the active simulation run");
 assert.ok(html.includes('await waitForNamedTimer(String(command.params.timerName||"").trim(),token)'), "Wait for Timer must block execution until its named timer reaches the configured duration");
 assert.ok(html.includes('timer.startedAt+timer.durationMs-Date.now()') && html.includes('await new Promise(resolve=>setTimeout(resolve,remaining))'), "Wait for Timer must wait only for the remaining time on the named timer");
 assert.ok(html.includes('simulationTimers={};mountedSimulationChannels={};'), "A fresh simulation run must clear prior timer state");
