@@ -610,7 +610,7 @@ async function executeSimulationCommand(command,token,loopPath=[],sampleChannels
  updateSimulationArmTips();
  if(command.name==="Mix"){
   const target=[...$("deck").querySelectorAll(".simulation-target")][0];
-  if(target){target.classList.add("mixing");await new Promise(resolve=>setTimeout(resolve,350));target.classList.remove("mixing")}
+  if(target){const cycles=Math.max(1,Math.min(100,Number(activeCommand.params.cycles)||1));target.style.animationIterationCount=String(cycles);target.classList.add("mixing");await new Promise(resolve=>setTimeout(resolve,Math.max(180,cycles*180)));target.classList.remove("mixing");target.style.animationIterationCount=""}
  }
 }
 function showDeckInfo(){
