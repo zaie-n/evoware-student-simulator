@@ -28,6 +28,60 @@
     return (params.channels || []).map(Number).sort((a, b) => a - b);
   }
 
+  function evaluateNumericExpression(expression, variables = new Map()) {
+    const source = String(expression ?? "").trim();
+    if (!source) return NaN;
+    const tokens = source.match(/[A-Za-z_][A-Za-z0-9_]*|(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?|[()+\-*/]/g) || [];
+    if (tokens.join("").replace(/\s/g, "") !== source.replace(/\s/g, "")) return NaN;
+    let index = 0;
+    const lookup = name => variables instanceof Map
+      ? variables.get(name.toUpperCase())
+      : variables[name.toUpperCase()];
+    const primary = () => {
+      const token = tokens[index++];
+      if (token === "(") {
+        const value = add();
+        if (tokens[index++] !== ")") throw new Error("parenthesis");
+        return value;
+      }
+      if (token === "+" || token === "-") {
+        const value = primary();
+        return token === "-" ? -value : value;
+      }
+      if (token && /^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(token)) return Number(token);
+      if (token && /^[A-Za-z_]/.test(token)) {
+        const value = lookup(token);
+        return value === undefined ? NaN : Number(value);
+      }
+      throw new Error("token");
+    };
+    const multiply = () => {
+      let value = primary();
+      while (tokens[index] === "*" || tokens[index] === "/") {
+        const operator = tokens[index++];
+        const right = primary();
+        value = operator === "*" ? value * right : value / right;
+      }
+      return value;
+    };
+    const add = () => {
+      let value = multiply();
+      while (tokens[index] === "+" || tokens[index] === "-") {
+        const operator = tokens[index++];
+        const right = multiply();
+        value = operator === "+" ? value + right : value - right;
+      }
+      return value;
+    };
+    try {
+      const value = add();
+      return index === tokens.length && Number.isFinite(value) ? value : NaN;
+    } catch {
+      return NaN;
+    }
+  }
+
+
   function wellLayout(item) {
     if (item.name.startsWith("96 Well Microplate")) return { rows: 8, cols: 12, kind: "plate" };
     if (item.name === "Trough 100ml") return { rows: 8, cols: 1, kind: "trough" };
@@ -134,12 +188,9 @@
           add("error", n, "Enter a descriptive name for this loop. Use the same name in its matching End Loop.");
         }
         const cycleValue = String(p.cycles ?? "").trim();
-        const cycles = Number(cycleValue);
-        const isVariable = /^[A-Za-z_][A-Za-z0-9_]*$/.test(cycleValue);
-        if ((!Number.isInteger(cycles) || cycles < 1) && !isVariable) {
-          add("error", n, "Loop cycles must be a positive whole number or the name of a defined numeric variable.");
-        } else if (isVariable && !definedVariables.has(cycleValue.toUpperCase())) {
-          add("error", n, "Loop variable " + cycleValue + " has not been assigned a numeric value before this loop.");
+        const cycles = evaluateNumericExpression(cycleValue, definedVariables);
+        if (!Number.isInteger(cycles) || cycles < 1) {
+          add("error", n, "Loop cycles must be a positive whole number or a valid arithmetic expression using previously assigned variables.");
         }
       }
 
@@ -234,22 +285,23 @@
           if (columns.size > 1) {
             add("error", n, "Selected positions must be in one column for this LiHa channel selection.");
           }
-          if (wells.length === channels.length && invalidWells.length === 0 &&
+          if (layout.kind === "single" && channels.length > 1) {
+            add("error", n, "A single 1.5 mL or 0.2 mL tube can serve only one LiHa channel. Use a 16-position tube carrier to handle multiple tubes in parallel.");
+          } else if (layout.kind !== "single" && wells.length === channels.length && invalidWells.length === 0 &&
               channels.every(channel => Number.isInteger(channel) && channel >= 1 && channel <= 8)) {
             const rowIndexes = wells.map(well =>
-              layout.kind === "plate" ? String(well).charCodeAt(0) - 65 :
-              layout.kind === "single" ? 0 : Number(well) - 1
+              layout.kind === "plate" ? String(well).charCodeAt(0) - 65 : Number(well) - 1
             );
             const referenceRows = rowIndexes.map((row, position) => row - (channels[position] - 1));
             const uniqueReferenceRows = new Set(referenceRows);
             if (uniqueReferenceRows.size > 1 || referenceRows.some(row => row < 0) ||
                 referenceRows.some(row => row + Math.max(...channels.map(channel => channel - 1)) >= layout.rows)) {
-              add("error", n, "Selected positions do not match the physical spacing of the selected LiHa channels. The clicked well is the channel 1 reference, so gaps between selected channels must be preserved.");
+              add("error", n, "Selected positions do not match the physical spacing of the selected LiHa channels. Each tube position holds one channel; preserve channel spacing across the rack.");
             }
           }
         }
 
-        const volume = Number(p.volume);
+        const volume = evaluateNumericExpression(p.volume, definedVariables);
         if (!Number.isFinite(volume) || volume <= 0) {
           add("error", n, "Enter a positive pipetting volume.");
         }
@@ -302,7 +354,7 @@
         if (c.name !== "Mix" && !["Water", "Glycerol", "Ethanol"].includes(p.liquidClass)) {
           add("error", n, "Choose a liquid class from the simulator's available liquid classes.");
         }
-        if (c.name === "Mix" && (!Number.isInteger(Number(p.cycles)) || Number(p.cycles) < 1)) {
+        if (c.name === "Mix" && (!Number.isInteger(evaluateNumericExpression(p.cycles, definedVariables)) || evaluateNumericExpression(p.cycles, definedVariables) < 1)) {
           add("error", n, "Mix cycles must be a positive whole number.");
         }
 
@@ -320,7 +372,7 @@
             if (!["column", "row", "well", "labware"].includes(dimension)) {
               add("error", n, "The selected loop dimension is not supported.");
             }
-            if (!Number.isInteger(Number(settings.step)) || Number(settings.step) < 1) {
+            if (!Number.isInteger(evaluateNumericExpression(settings.step, definedVariables)) || evaluateNumericExpression(settings.step, definedVariables) < 1) {
               add("error", n, "The " + dimension + " loop increment must be a positive whole number.");
             }
           });
@@ -360,7 +412,7 @@
       }
 
       if (c.name === "Start Timer") {
-        const seconds = Number(p.seconds);
+        const seconds = evaluateNumericExpression(p.seconds, definedVariables);
         if (!Number.isFinite(seconds) || seconds < 0) {
           add("error", n, "Timer length must be zero or a positive number of seconds.");
         }
@@ -371,17 +423,15 @@
       if (c.name === "Set Variable") {
         const variableName = String(p.name || "").trim();
         const variableValue = String(p.value ?? "").trim();
+        const resolvedValue = evaluateNumericExpression(variableValue, definedVariables);
         if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(variableName)) {
           add("error", n, "Enter a valid variable name (letters, numbers, and underscores; it cannot start with a number).");
         }
-        if (variableValue === "" || (!Number.isFinite(Number(variableValue)) && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(variableValue))) {
-          add("error", n, "Enter a numeric value or the name of an existing numeric variable.");
-        } else if (!Number.isFinite(Number(variableValue)) && !definedVariables.has(variableValue.toUpperCase())) {
-          add("error", n, "Variable " + variableValue + " has not been assigned a numeric value before this command.");
-        } else if (variableName === variableValue) {
+        if (variableValue === "" || !Number.isFinite(resolvedValue)) {
+          add("error", n, "Enter a number or a valid arithmetic expression using previously assigned variables.");
+        } else if (variableName.toUpperCase() === variableValue.toUpperCase()) {
           add("error", n, "A variable cannot be assigned from itself before it has a value.");
-        } else {
-          const resolvedValue = Number.isFinite(Number(variableValue)) ? Number(variableValue) : definedVariables.get(variableValue.toUpperCase());
+        } else if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(variableName)) {
           definedVariables.set(variableName.toUpperCase(), resolvedValue);
         }
       }
