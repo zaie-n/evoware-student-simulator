@@ -721,6 +721,7 @@ function buildExecutionPlan(){
       plan.push({commandIndex:i,loopPath:path,loopBoundary:"begin",sampleCount:requested,tipsPerCycle,variables:{...variables}});
       let remaining=requested;
       for(let cycle=1;cycle<=total;cycle++){
+       variables.SAMPLE_CNT=remaining;
        const activeChannels=usedChannels.slice(0,Math.min(tipsPerCycle,remaining));
        const cyclePath=[...path,{name:loopName,cycle,total,sampleRemaining:remaining}];
        appendRange(i+1,end,cyclePath,activeChannels);
