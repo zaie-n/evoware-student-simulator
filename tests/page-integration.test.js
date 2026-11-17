@@ -33,7 +33,10 @@ const planStart = html.indexOf("function buildExecutionPlan(){");
 const planEnd = html.indexOf("\nfunction prepareRun()", planStart);
 assert.ok(planStart >= 0 && planEnd > planStart, "Variable-aware execution planner must be present");
 const planSource = html.slice(planStart, planEnd);
-const makePlan = new Function("method", planSource + "\nreturn buildExecutionPlan();");
+const planExpressionStart = html.indexOf("function evaluateNumericExpression");
+const planExpressionEnd = html.indexOf("\nfunction addChannelPicker", planExpressionStart);
+const planExpressionSource = html.slice(planExpressionStart, planExpressionEnd);
+const makePlan = new Function("method", planExpressionSource + "\n" + planSource + "\nreturn buildExecutionPlan();");
 const variablePlan = makePlan([
   {name:"Set Variable",params:{name:"Num_Samples",value:12}},
   {name:"Begin Loop",params:{loopName:"Bead addition",cycles:"Num_Samples"}},
