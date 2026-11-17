@@ -616,7 +616,7 @@ function buildExecutionPlan(){
  const resolveValue=value=>{
   const raw=String(value??"").trim();
   if(raw!==""&&Number.isFinite(Number(raw)))return Number(raw);
-  return Object.prototype.hasOwnProperty.call(variables,raw)?variables[raw]:NaN;
+  return Object.prototype.hasOwnProperty.call(variables,raw.toUpperCase())?variables[raw.toUpperCase()]:NaN;
  };
  const sampleChannelsInRange=(from,to)=>{
   const used=new Set();
