@@ -141,6 +141,17 @@ assert.deepEqual(nested.params.wells,["E3"], "Nested loop offsets must accumulat
 const outOfBounds = applyOffsets(makeCommand("Aspirate","source",["H12"],{row:{enabled:true,step:1}}),[{name:"Outer",cycle:2,total:3}],getPlate,plateLayout,targetLabel);
 assert.deepEqual(outOfBounds.params.wells,["OUT OF RANGE"], "Loop advancement must not wrap beyond the edge of labware");
 
+
+assert.ok(html.includes('input("cycles","Loop cycles"'), "Loop cycle field should not include the SAMPLE_CNT parenthetical");
+assert.ok(html.includes('["SAMPLE_CNT","Custom Variable"]'), "Set Variable should offer SAMPLE_CNT and Custom Variable choices");
+assert.ok(html.includes('password!=="purify"'), "Premade bead-cleanup templates should require the instructor password");
+assert.ok(html.includes('waste-stream-symbol'), "DiTi Waste should render as a waste-stream outline, not a channel bank");
+const expressionStart = html.indexOf("function evaluateNumericExpression");
+const expressionEnd = html.indexOf("\\nfunction addChannelPicker", expressionStart);
+assert.ok(expressionStart >= 0 && expressionEnd > expressionStart, "Arithmetic expression evaluator should be present");
+const evaluateExpression = new Function(html.slice(expressionStart, expressionEnd) + "\\nreturn evaluateNumericExpression;")();
+assert.equal(evaluateExpression("SAMPLE_CNT*4", {SAMPLE_CNT:4}), 16, "Arithmetic should resolve variables in numeric fields");
+assert.equal(evaluateExpression("(SAMPLE_CNT+2)/2", {SAMPLE_CNT:4}), 3, "Arithmetic should support precedence and parentheses");
 assert.ok(html.includes('target.scrollIntoView({block:"nearest",behavior:"smooth"})'), "Selecting a finding must scroll its command into view");
 assert.ok(inlineScripts.length > 0, "index.html must contain its application script");
 
