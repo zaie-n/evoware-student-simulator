@@ -163,6 +163,10 @@ assert.deepEqual(outOfBounds.params.wells,["OUT OF RANGE"], "Loop advancement mu
 assert.ok(html.includes('input("cycles","Loop cycles"'), "Loop cycle field should not include the SAMPLE_CNT parenthetical");
 assert.ok(html.includes('["SAMPLE_CNT","Custom Variable"]'), "Set Variable should offer SAMPLE_CNT and Custom Variable choices");
 assert.ok(html.includes('password!=="purify"'), "Premade bead-cleanup templates should require the instructor password");
+assert.ok(html.includes("const PRELOADED_PROTOCOLS_ENABLED = false;"), "Preloaded protocol buttons should be disabled by default for the student-facing version");
+assert.ok(html.includes('id="preloadedProtocolControls" hidden'), "Preloaded protocol buttons should be grouped in a hidden-by-default container");
+assert.ok(html.includes('$("preloadedProtocolControls").hidden=!PRELOADED_PROTOCOLS_ENABLED'), "The instructor setting should control visibility of the premade protocol buttons");
+assert.ok(html.includes('$("loadBead8").onclick=()=>loadBeadCleanupTemplate(false);$("loadBeadVariable").onclick=()=>loadBeadCleanupTemplate(true);'), "Both premade protocols should remain wired to their existing password-protected loaders");
 assert.ok(html.includes('waste-stream-symbol'), "DiTi Waste should render as a waste-stream outline, not a channel bank");
 
 assert.ok(html.includes("isTubeRack:true") && html.includes("rackItems:c.items"), "A 16-position carrier should appear as one virtual labware entry in command selectors");
