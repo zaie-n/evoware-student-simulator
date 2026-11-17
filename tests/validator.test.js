@@ -455,30 +455,58 @@ test("arithmetic expressions can be used for loop cycles and custom variable ass
   assert.equal(errors(findings).length, 0, JSON.stringify(errors(findings), null, 2));
 });
 
-test("a 16-position tube carrier assigns one tube position to each selected channel", () => {
+test("a 16-position tube carrier is selected as one rack and maps consecutive occupied positions", () => {
   const deck = [
-    { name: "Tube 13mm 16 Pos", items: [{ name: "1.5mL tube", label: "Elution Tubes" }, ...Array(15).fill(null)] },
+    { name: "Tube 13mm 16 Pos", rackLabel: "Elution Rack", items: [
+      { name: "1.5mL tube", label: "Tube 1" },
+      { name: "1.5mL tube", label: "Tube 2" },
+      { name: "1.5mL tube", label: "Tube 3" },
+      ...Array(13).fill(null)
+    ] },
     { name: "DiTi 2Pos + Waste", items: [{ name: "DiTi 200µL LiHa", label: "200uL Tips" }, null, { name: "DiTi Waste", label: "Tip Waste" }] }
   ];
   const findings = findingsFor([
     { name: "Get DiTi", params: { tips: "DiTi 200µL LiHa", channels: [1, 2, 3] } },
-    aspirate({ source: "Elution Tubes", channels: [1, 2, 3], wells: ["1", "2", "3"] }),
+    aspirate({ source: "Elution Rack", channels: [1, 2, 3], wells: ["1", "2", "3"] }),
     dropTips({ channels: [1, 2, 3] })
   ], deck);
   assert.equal(errors(findings).length, 0, JSON.stringify(errors(findings), null, 2));
 });
 
-test("tube positions must preserve one-tube-per-channel spacing", () => {
+test("a rack-level command cannot select an empty tube carrier position", () => {
   const deck = [
-    { name: "Tube 13mm 16 Pos", items: [{ name: "0.2mL tube", label: "PCR Tubes" }, ...Array(15).fill(null)] },
+    { name: "Tube 13mm 16 Pos", rackLabel: "Elution Rack", items: [
+      { name: "1.5mL tube", label: "Tube 1" },
+      null,
+      { name: "1.5mL tube", label: "Tube 3" },
+      ...Array(13).fill(null)
+    ] },
     { name: "DiTi 2Pos + Waste", items: [{ name: "DiTi 200µL LiHa", label: "200uL Tips" }, null, { name: "DiTi Waste", label: "Tip Waste" }] }
   ];
   const findings = findingsFor([
     { name: "Get DiTi", params: { tips: "DiTi 200µL LiHa", channels: [1, 2] } },
-    aspirate({ source: "PCR Tubes", channels: [1, 2], wells: ["1", "3"] })
+    aspirate({ source: "Elution Rack", channels: [1, 2], wells: ["1", "2"] })
   ], deck);
   assert.equal(hasErrorAt(findings, 2), true);
-  assert.equal(hasMessage(findings, "physical spacing of the selected LiHa channels"), true);
+  assert.equal(hasMessage(findings, "Carrier position 2 on Elution Rack are empty"), true);
+});
+
+test("rack-level tube positions must be consecutive and ordered, independent of channel numbers", () => {
+  const deck = [
+    { name: "Tube 13mm 16 Pos", rackLabel: "Elution Rack", items: [
+      { name: "0.2mL tube", label: "Tube 1" },
+      null,
+      { name: "0.2mL tube", label: "Tube 3" },
+      ...Array(13).fill(null)
+    ] },
+    { name: "DiTi 2Pos + Waste", items: [{ name: "DiTi 200µL LiHa", label: "200uL Tips" }, null, { name: "DiTi Waste", label: "Tip Waste" }] }
+  ];
+  const findings = findingsFor([
+    { name: "Get DiTi", params: { tips: "DiTi 200µL LiHa", channels: [2, 5] } },
+    aspirate({ source: "Elution Rack", channels: [2, 5], wells: ["1", "3"] })
+  ], deck);
+  assert.equal(hasErrorAt(findings, 2), true);
+  assert.equal(hasMessage(findings, "Tube carrier positions must be consecutive and in carrier order"), true);
 });
 
 test("a single tube outside a 16-position rack cannot serve multiple channels", () => {
