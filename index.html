@@ -176,7 +176,7 @@ function renderProperties(){
  if(c.name==="Get DiTi"){let racks=[...new Set(items.filter(x=>["DiTi 1000µL LiHa","DiTi 200µL LiHa"].includes(x.name)).map(x=>x.name))];select("tips","DiTi type available on worktable",racks,c.params.tips)}
  if(c.name==="Drop DiTi"){let wastes=items.filter(x=>x.name==="DiTi Waste").map(x=>x.label);select("waste","DiTi Waste to use",wastes,c.params.waste)}
  if(["Get DiTi","Drop DiTi"].includes(c.name)){addChannelPicker(area,c.params)}
- if(c.name==="Begin Loop"){input("loopName","Loop name",c.params.loopName||"");input("cycles","Loop cycles or variable name",c.params.cycles??1)}
+ if(c.name==="Begin Loop"){input("loopName","Loop name",c.params.loopName||"");input("cycles","Loop cycles (use SAMPLE_CNT for sample-aware looping)",c.params.cycles??1)}
  if(c.name==="End Loop")input("loopName","Loop name",c.params.loopName||"");
  if(c.name==="Start Timer"){input("timerName","Timer name",c.params.timerName||"mix_timer");input("seconds","Timer length (seconds)",c.params.seconds??30,"number",0)}
  if(c.name==="Wait for Timer")input("timerName","Timer name to wait for",c.params.timerName||"mix_timer");
