@@ -164,20 +164,20 @@ function makeBeadCleanupMethod(variableSamples){
  const aspirate=(source,wells,volume,liquidClass="Water",loopOptions=null)=>add("Aspirate",{source,wells:[...wells],volume,liquidClass,channels:[...channels],...(loopOptions?{loopOptions}:{})});
  const dispense=(destination,wells,volume,liquidClass="Water",loopOptions=null)=>add("Dispense",{destination,wells:[...wells],volume,liquidClass,channels:[...channels],...(loopOptions?{loopOptions}:{})});
  const ethanolWash=(suffix)=>{
-  beginSampleLoop("EtOH addition "+suffix);getTips("DiTi 1000µL LiHa");aspirate("80 percent EtOH",troughWells,200,"Ethanol");dispense("Mag Plate",plateWells,200,"Ethanol",plateLoop);dropTips();endSampleLoop("EtOH addition "+suffix);
-  beginSampleLoop("EtOH discard "+suffix);getTips();aspirate("Mag Plate",plateWells,200,"Ethanol",sourcePlateLoop);dropTips();endSampleLoop("EtOH discard "+suffix);
+  beginSampleLoop("EtOH addition "+suffix);getTips("DiTi 1000µL LiHa");aspirate("80 percent EtOH",troughWells,200,"Ethanol");dispense("Bead Plate",plateWells,200,"Ethanol",plateLoop);dropTips();endSampleLoop("EtOH addition "+suffix);
+  beginSampleLoop("EtOH discard "+suffix);getTips();aspirate("Bead Plate",plateWells,200,"Ethanol",sourcePlateLoop);dropTips();endSampleLoop("EtOH discard "+suffix);
  };
  userPrompt("Bead cleanup assumptions:\n• Each sample well contains 20 µL DNA.\n• SPRI bead-to-sample ratio is 1.8:1 (36 µL beads per sample).\n• The template starts with all eight LiHa channels selected. Students may change channel selections in individual commands.");
  if(variableSamples)add("Set Variable",{name:"Num_Samples",value:8,askAtRun:true,prompt:"Enter the number of samples for this run (1–16).",min:1,max:16});
  beginSampleLoop("Bead pipetting");getTips();mix("SPRI Beads",troughWells,200,3);aspirate("SPRI Beads",troughWells,36);dispense("Bead Plate",plateWells,36,"Water",plateLoop);mix("Bead Plate",plateWells,30,3,plateLoop);dropTips();endSampleLoop("Bead pipetting");
  timer("Bead_Mix",300);userPrompt("Move the Bead Plate to the magnetic position. Allow the beads to separate for 5 minutes.");timer("Magnetic_Separation",300);
- beginSampleLoop("Supernatant discard");getTips();aspirate("Mag Plate",plateWells,160,"Water",sourcePlateLoop);dropTips();endSampleLoop("Supernatant discard");
+ beginSampleLoop("Supernatant discard");getTips();aspirate("Bead Plate",plateWells,160,"Water",sourcePlateLoop);dropTips();endSampleLoop("Supernatant discard");
  ethanolWash("1");ethanolWash("2");
  userPrompt("Inspect the plate. If residual ethanol remains, remove it manually. Ensure all ethanol has been removed.");
  userPrompt("Move the Bead Plate off the magnet to the resuspension position.");userPrompt("Dry the beads. Matte = well dried; shiny = still wet; cracked = overdried.");timer("Bead_Drying",240);userPrompt("Check the beads. Proceed only when the beads are dry and appear matte.");
  beginSampleLoop("Resuspend Beads");getTips();aspirate("Resuspension Buffer",troughWells,35);dispense("Bead Plate",plateWells,35,"Water",plateLoop);mix("Bead Plate",plateWells,15,3,plateLoop);dropTips();endSampleLoop("Resuspend Beads");
  timer("Resuspension",240);userPrompt("Move the Bead Plate onto the magnet. In the simulator, ensure the 16-position Elution Tubes rack is loaded at worktable position 5 and the labeled tubes are ready.");timer("Elution_Magnetic_Separation",300);
- beginSampleLoop("Elution");getTips();aspirate("Mag Plate",plateWells,15,"Water",sourcePlateLoop);dispense("Elution Tubes",tubeWells,15,"Water",tubeOutputLoop);dropTips();endSampleLoop("Elution");
+ beginSampleLoop("Elution");getTips();aspirate("Bead Plate",plateWells,15,"Water",sourcePlateLoop);dispense("Elution Tubes",tubeWells,15,"Water",tubeOutputLoop);dropTips();endSampleLoop("Elution");
  userPrompt("Close the filled tubes and store them on ice. The single elution loop supports up to 16 samples; no second tube-rack refill cycle is needed.");
  return cmds;
 }
@@ -185,8 +185,8 @@ function loadBeadCleanupTemplate(variableSamples){
  const label=variableSamples?"variable 1–16-sample":"fixed 8-sample";
  if(method.length&&!confirm("Replace the current method with the "+label+" bead-cleanup template?"))return;
  method=makeBeadCleanupMethod(variableSamples);deck=Array.from({length:8},()=>null);
- deck[0]={name:"MP 4Pos flat",items:[{name:"96 Well Microplate",label:"Bead Plate"},null,null,null]};
- deck[1]={name:"MP 4Pos flat - MagPlate",items:[{name:"96 Well Microplate - MagPlat",label:"Mag Plate"},null,null,null]};
+ deck[0]={name:"MP 4Pos flat",items:[null,null,null,null]};
+ deck[1]={name:"MP 4Pos flat - MagPlate",items:[{name:"96 Well Microplate - MagPlat",label:"Bead Plate"},null,null,null]};
  deck[2]={name:"DiTi 2Pos + Waste",items:[{name:"DiTi 200µL LiHa",label:"200 µL Tips"},{name:"DiTi 1000µL LiHa",label:"1000 µL Tips"},{name:"DiTi Waste",label:"Tip Waste"}]};
  deck[3]={name:"Trough 3Pos 25+100ml",items:[{name:"Trough 100ml",label:"SPRI Beads"},{name:"Trough 100ml",label:"80 percent EtOH"},{name:"Trough 100ml",label:"Resuspension Buffer"}]};
  deck[4]={name:"Tube 13mm 16 Pos",items:[{name:"1.5mL tube",label:"Elution Tubes"},...Array(15).fill(null)]};
