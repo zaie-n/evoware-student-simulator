@@ -79,12 +79,12 @@ assert.equal(resetSamplePlan.filter(step=>step.commandIndex===7).length,2,"Reass
 
 
 assert.ok(html.includes('input("value","Numeric value or existing variable name"'), "Set Variable must accept a custom numeric value or a variable reference");
-assert.ok(html.includes('input("cycles","Loop cycles or variable name"'), "Begin Loop must accept a variable name such as SAMPLE_CNT");
+assert.ok(html.includes('input("cycles","Loop cycles (use SAMPLE_CNT for sample-aware looping)"'), "Begin Loop must accept a variable name such as SAMPLE_CNT");
 assert.ok(html.includes('resolved=resolveValue(rawCycles)'), "Execution planning must resolve variable-driven loop counts");
-assert.ok(html.includes('variables[name]=value'), "Set Variable must update the variable environment used by subsequent loops");
-assert.ok(html.includes("for(let cycle=1;cycle<=cycles;cycle++)appendRange(i+1,end"), "Loop cycles must repeat the commands inside the matching loop");
+assert.ok(html.includes('variables[name.toUpperCase()]=value'), "Set Variable must update the variable environment used by subsequent loops");
+assert.ok(html.includes("for(let cycle=1;cycle<=cycles;cycle++){"), "Loop cycles must repeat the commands inside the matching loop");
 assert.ok(html.includes("loopPath.map(x=>x.name+\" \"+x.cycle+\"/\"+x.total)"), "Execution feedback must identify the active loop iteration");
-assert.ok(html.includes("runSteps=buildExecutionPlan()"), "Run preparation must build the expanded execution plan");
+assert.ok(html.includes("runSteps=buildExecutionPlan(overrides)"), "Run preparation must build the expanded execution plan");
 assert.ok(html.includes("simulationPlaying=false"), "Simulation must support pausing and stepping");
 assert.ok(html.includes('id="renameItem"') && html.includes('id="removeItem"'), "Selected labware must show Rename labware next to Remove labware");
 assert.ok(html.includes("EvoWareWorktable.renameLabware(deck,x.pos,x.site,requested)"), "Rename labware action must use the rename helper");
