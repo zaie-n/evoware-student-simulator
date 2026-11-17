@@ -61,6 +61,7 @@ main{padding:10px;max-width:1600px;margin:auto}
 .modal{background:#f8f9fb;border:1px solid #9eabb8;max-width:540px;width:100%;padding:15px;border-radius:5px;box-shadow:0 8px 30px #0003}
 .modal h3{margin:0 0 8px}.modal p{font-size:12px;color:#536577;line-height:1.5}
 .modal .actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}
+.prompt-back{position:fixed;inset:0;background:#142333aa;display:none;align-items:center;justify-content:center;padding:15px;z-index:20}.prompt-modal{background:#f8f9fb;border:1px solid #8193a3;border-radius:6px;box-shadow:0 12px 40px #0005;max-width:520px;width:100%;padding:20px}.prompt-modal h3{margin:0 0 12px;color:#26394b}.prompt-message{font-size:14px;line-height:1.6;white-space:pre-wrap;color:#33495d}.prompt-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}.prompt-actions button{min-width:105px;padding:9px 14px;border-radius:4px;border:1px solid #9eabb8;cursor:pointer;font-weight:700}.prompt-continue{background:#2877b8;color:white;border-color:#1c6198!important}.prompt-abort{background:#fff;color:#a3332b;border-color:#c88e89!important}
 @media(max-width:850px){.topgrid{grid-template-columns:1fr}.library{max-height:300px}.lower{grid-template-columns:1fr}.deckscroll{overflow-x:auto}.deck{min-width:760px}}
 .carrier.tube-rack-carrier{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;align-content:start}.carrier.tube-rack-carrier .carriername{grid-column:1/-1}.carrier.tube-rack-carrier .tube-rack-position{min-width:0;min-height:17px;padding:0 7px;border:1px solid #8797a5;border-radius:2px;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:4px;background:#e6ebef;color:#8b969f;cursor:copy;font-size:9px}.carrier.tube-rack-carrier .tube-rack-position.occupied{background:#b9a6d5;border-color:#8b75a9;color:#493d5e;cursor:grab}.carrier.tube-rack-carrier .tube-rack-position.empty{background:#e1e5e8;border-style:dashed;color:#a2aab1}.carrier.tube-rack-carrier .tube-rack-position .tube-rack-symbol{font-size:12px;line-height:14px}.carrier.tube-rack-carrier .tube-rack-position-number{font-size:8px;line-height:9px}
 </style>
@@ -119,6 +120,7 @@ main{padding:10px;max-width:1600px;margin:auto}
 <p class="sub" style="padding:8px 2px">Independent educational simulator. Not affiliated with, endorsed by, or produced by Tecan. Tecan, Freedom EVO, and EVOware are trademarks of their respective owner. This simulator does not connect to an instrument or generate executable instrument methods.</p>
 </main>
 <div class="modalback" id="modalBack"><div class="modal"><h3 id="modalTitle">Configure item</h3><div id="modalBody"></div><div class="actions"><button class="btn" id="cancelModal">Cancel</button><button class="btn primary" id="confirmModal">Place item</button></div></div></div>
+<div class="prompt-back" id="simulationPromptBack" role="dialog" aria-modal="true" aria-labelledby="simulationPromptTitle"><div class="prompt-modal"><h3 id="simulationPromptTitle">Operator prompt</h3><div class="prompt-message" id="simulationPromptMessage"></div><div class="prompt-actions"><button class="prompt-abort" id="simulationPromptAbort" type="button">Abort</button><button class="prompt-continue" id="simulationPromptContinue" type="button">Continue</button></div></div></div>
 <script src="validator.js"></script>
 <script src="worktable.js"></script>
 <script>
@@ -142,6 +144,7 @@ const icons={"Aspirate":"↑","Dispense":"↓","Mix":"↻","Get DiTi":"▤","Dro
 const defaults={"Get DiTi":{tips:"DiTi 200µL LiHa",channels:[1,2,3,4,5,6,7,8]},"Drop DiTi":{channels:[1,2,3,4,5,6,7,8],waste:""},"Aspirate":{source:"",volume:23,liquidClass:"Water",channels:[1,2,3,4,5,6,7,8],wells:[]},"Dispense":{destination:"",volume:23,liquidClass:"Water",channels:[1,2,3,4,5,6,7,8],wells:[]},"Mix":{volume:100,cycles:3},"Begin Loop":{loopName:"",cycles:8},"End Loop":{loopName:""},"Set Variable":{name:"sample_count",value:16},"If – Then":{condition:"sample_count > 0"},"User Prompt":{message:"Check reagent reservoirs"},"Start Timer":{timerName:"mix_timer",seconds:30},"Wait for Timer":{timerName:"mix_timer"}};
 let method=[],selected=-1,deck=Array.from({length:8},()=>null),selectedDeck=null,validated=false,runIndex=0,runSteps=[],dragItem=null,dragMove=null,dragCommandId=null,dropIndex=null,dropAfter=false,runVariableOverrides={},tubeRackSequence=0;let simulationPlaying=false,simulationBusy=false,simulationRunId=0,simulationTimer=null,mountedSimulationChannels={},simulationTimers={};
 function log(s){$("log").innerHTML+=`<br>${new Date().toLocaleTimeString()} ${s}`;$("log").scrollTop=$("log").scrollHeight}
+function showSimulationPrompt(message,token){return new Promise(resolve=>{const back=$("simulationPromptBack");$("simulationPromptMessage").textContent=message||"Please complete the requested action, then continue.";back.style.display="flex";$("simulationPromptContinue").focus();let settled=false;const finish=choice=>{if(settled)return;settled=true;back.style.display="none";$("simulationPromptContinue").removeEventListener("click",onContinue);$("simulationPromptAbort").removeEventListener("click",onAbort);resolve(choice)};const onContinue=()=>finish("continue");const onAbort=()=>{finish("abort");if(token===simulationRunId){simulationRunId++;simulationPlaying=false;simulationBusy=false;clearTimeout(simulationTimer);$("status").textContent="STATUS: SIMULATION ABORTED";$("runFeedback").textContent="The operator aborted the simulation at a user prompt."; $("simAction").textContent="Simulation aborted by user."; $("pauseRun").hidden=true;$("stepRun").disabled=false;$("run").disabled=false;$("run").textContent="↻ Run again";log("SIMULATION ABORTED AT USER PROMPT");}};$("simulationPromptContinue").addEventListener("click",onContinue);$("simulationPromptAbort").addEventListener("click",onAbort);});}
 function getLabwareItems(){return deck.flatMap((c,pos)=>{if(!c)return [];if(c.name==="Tube 13mm 16 Pos"){if(!c.rackLabel)c.rackLabel="Tube 13mm 16 Pos — Rack "+(++tubeRackSequence);return [{name:c.name,label:c.rackLabel,pos,site:-1,carrier:c.name,rackItems:c.items,isTubeRack:true}]}return c.items.map((x,site)=>x?{...x,pos,site,carrier:c.name}:null).filter(Boolean)})}
 function getLabwareLabels(){return getLabwareItems().map(x=>x.label)}
 function wellLayout(item){if(item.name.startsWith("96 Well Microplate"))return {rows:8,cols:12,kind:"plate"};if(item.name==="Trough 100ml")return {rows:8,cols:1,kind:"trough"};if(item.carrier==="Tube 13mm 16 Pos")return {rows:16,cols:1,kind:"tubes"};if(item.name==="1.5mL tube"||item.name==="0.2mL tube")return {rows:1,cols:1,kind:"single"};
@@ -579,7 +582,7 @@ async function waitForNamedTimer(timerName,token){
  if(!timer){log("WAIT FOR TIMER: no Start Timer named "+timerName+" has run; continuing without a delay.");return}
  const remaining=Math.max(0,timer.startedAt+timer.durationMs-Date.now());
  $("simAction").textContent="Waiting for timer "+timerName+" ("+(remaining/1000).toFixed(1)+" seconds remaining).";
- if(remaining>0)await new Promise(resolve=>setTimeout(resolve,remaining));
+ if(remaining>0)await new Promise(resolve=>setTimeout(resolve,remaining/3));
  if(token!==simulationRunId)return;
  log("TIMER COMPLETE: "+timerName);
 }
@@ -598,6 +601,7 @@ async function executeSimulationCommand(command,token,loopPath=[],sampleChannels
  for(const key of numericKeys){if(simulatedCommand.params[key]!==undefined){const value=evaluateNumericExpression(simulatedCommand.params[key],variableValues);if(Number.isFinite(value))simulatedCommand.params[key]=value}}
  if(simulatedCommand.params.loopOptions){for(const scope of ["source","destination","target"]){const options=simulatedCommand.params.loopOptions[scope]||{};for(const dimension of ["column","row","well"]){if(options[dimension]?.step!==undefined){const value=evaluateNumericExpression(options[dimension].step,variableValues);if(Number.isFinite(value))options[dimension].step=value}}}}
  const activeCommand=applyLoopWellOffsets(simulatedCommand,loopPath);
+ if(command.name==="User Prompt"){const choice=await showSimulationPrompt(String(activeCommand.params.message||"Please complete the requested action."),token);if(choice!=="continue"||token!==simulationRunId)return;log("USER PROMPT CONTINUED");}
  const label=commandTarget(activeCommand),wells=commandWells(activeCommand);
  $("simAction").textContent=describeSimulationCommand(activeCommand);
  if(wells.includes("OUT OF RANGE"))$("simAction").textContent+=" Loop advance exceeds the available labware positions.";
@@ -605,7 +609,7 @@ async function executeSimulationCommand(command,token,loopPath=[],sampleChannels
  if(token!==simulationRunId)return;
  if(activeCommand.name==="Get DiTi")selectedChannels(activeCommand.params).forEach(ch=>mountedSimulationChannels[ch]=activeCommand.params.tips);
  if(activeCommand.name==="Drop DiTi")selectedChannels(activeCommand.params).forEach(ch=>delete mountedSimulationChannels[ch]);
- if(activeCommand.name==="Start Timer"){const timerName=String(activeCommand.params.timerName||"").trim();simulationTimers[timerName]={startedAt:Date.now(),durationMs:Math.max(0,Number(activeCommand.params.seconds)||0)*1000};log("TIMER STARTED: "+timerName+" ("+activeCommand.params.seconds+" seconds)")}
+ if(activeCommand.name==="Start Timer"){const timerName=String(activeCommand.params.timerName||"").trim();simulationTimers[timerName]={startedAt:Date.now(),durationMs:Math.max(0,Number(activeCommand.params.seconds)||0)*1000/3};log("TIMER STARTED: "+timerName+" ("+activeCommand.params.seconds+" seconds at 3× simulation speed)")}
  if(command.name==="Wait for Timer")await waitForNamedTimer(String(command.params.timerName||"").trim(),token);
  if(token!==simulationRunId)return;
  updateSimulationArmTips();
