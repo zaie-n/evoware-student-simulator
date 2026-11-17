@@ -52,10 +52,10 @@ assert.ok(!html.includes('"labware"') || !html.includes('let dims=["column","row
 assert.ok(html.includes("function applyLoopWellOffsets(command,loopPath)"), "Simulation must calculate well offsets from active loop iterations");
 assert.ok(html.includes("executeSimulationCommand(command,token,step.loopPath)"), "Each executed command must receive its active nested loop path");
 const offsetStart = html.indexOf("function applyLoopWellOffsets(command,loopPath){");
-const offsetEnd = html.indexOf("\\nfunction describeSimulationCommand", offsetStart);
+const offsetEnd = html.indexOf("\nfunction describeSimulationCommand", offsetStart);
 assert.ok(offsetStart >= 0 && offsetEnd > offsetStart, "Loop well offset helper must be present");
 const offsetSource = html.slice(offsetStart, offsetEnd);
-const applyOffsets = new Function("command","loopPath","getLabwareItems","wellLayout","commandTarget", offsetSource + "\\nreturn applyLoopWellOffsets;");
+const applyOffsets = new Function("command","loopPath","getLabwareItems","wellLayout","commandTarget", offsetSource + "\nreturn applyLoopWellOffsets;");
 const plate = {label:"Plate A",name:"96 Well Microplate"};
 const getPlate = () => [plate];
 const plateLayout = () => ({rows:8,cols:12,kind:"plate"});
