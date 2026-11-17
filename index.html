@@ -474,7 +474,8 @@ function applyLoopWellOffsets(command,loopPath){
    row=Number(match[1])-1;
   }
   row+=rowShift;column+=columnShift;
-  let linear=row*layout.cols+column+wellShift;
+  if(row<0||row>=layout.rows||column<0||column>=layout.cols)return "OUT OF RANGE";
+  const linear=row*layout.cols+column+wellShift;
   row=Math.floor(linear/layout.cols);column=linear%layout.cols;
   if(row<0||row>=layout.rows||column<0||column>=layout.cols)return "OUT OF RANGE";
   if(layout.kind==="plate")return String.fromCharCode(65+row)+(column+1);
