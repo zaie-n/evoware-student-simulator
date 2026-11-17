@@ -81,7 +81,7 @@ main{padding:10px;max-width:1600px;margin:auto}
  </section>
  <div class="workspace-column">
   <section class="panel">
-   <div class="phead">Script Editor <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><button class="btn" id="loadBead8" type="button">Load 8-sample bead cleanup</button><button class="btn" id="loadBeadVariable" type="button">Load variable 1–16 bead cleanup</button><span id="commandCount" style="font-weight:400">0 commands</span></span></div>
+   <div class="phead">Script Editor <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span id="preloadedProtocolControls" hidden><button class="btn" id="loadBead8" type="button">Load 8-sample bead cleanup</button><button class="btn" id="loadBeadVariable" type="button">Load variable 1–16 bead cleanup</button></span><span id="commandCount" style="font-weight:400">0 commands</span></span></div>
    <div class="script" id="script">
     <div class="empty">Drag commands here to build your method.<br><br>Commands can be selected to edit their properties and dragged to reorder.</div>
    </div>
@@ -126,6 +126,9 @@ main{padding:10px;max-width:1600px;margin:auto}
 <script>
 (()=>{
 const $=id=>document.getElementById(id);
+// Instructor setting: set to true to show the password-protected premade bead-cleanup protocol buttons.
+// Leave false for the student-facing version. The protocol templates and password check remain in this file.
+const PRELOADED_PROTOCOLS_ENABLED = false;
 const categories={
  "Commands":[["LiHa",["Aspirate","Dispense","Mix","Get DiTi","Drop DiTi"]],["Programming",["Start Timer","Wait for Timer","User Prompt","Begin Loop","End Loop","Set Variable","If – Then"]]],
  "Liquid Classes":[["Liquid Classes",["Water","Glycerol","Ethanol"]]],
@@ -819,7 +822,7 @@ $("stepRun").onclick=()=>{if((runIndex===0||runIndex>=runSteps.length)&&!prepare
 $("resetRun").onclick=()=>{simulationRunId++;simulationPlaying=false;simulationBusy=false;clearTimeout(simulationTimer);$("validationPanel").classList.remove("visible");runIndex=0;runSteps=[];simulationTimers={};mountedSimulationChannels={};updateSimulationArmTips();clearSimulationHighlight();$("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent=validated?"STATUS: READY":"STATUS: NOT VALIDATED";$("stepRun").disabled=!validated;$("pauseRun").hidden=true;$("run").disabled=!validated;$("run").textContent="▶ Run simulation";$("simAction").textContent="Simulation reset. Ready to run again.";$("log").innerHTML="SIMULATION RESET"};
 $("toggleInfopad").onclick=()=>{const panel=$("infopadPanel"),collapsed=panel.classList.toggle("collapsed");$("toggleInfopad").textContent=collapsed?"Expand":"Collapse";$("toggleInfopad").setAttribute("aria-expanded",String(!collapsed))};
 $("loadBead8").onclick=()=>loadBeadCleanupTemplate(false);$("loadBeadVariable").onclick=()=>loadBeadCleanupTemplate(true);
-renderLibrary("Commands");renderMethod();renderDeck();$("run").disabled=true;$("stepRun").disabled=true;
+$("preloadedProtocolControls").hidden=!PRELOADED_PROTOCOLS_ENABLED;renderLibrary("Commands");renderMethod();renderDeck();$("run").disabled=true;$("stepRun").disabled=true;
 })();
 </script>
 </body>
