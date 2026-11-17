@@ -176,7 +176,7 @@ function renderProperties(){
  if(c.name==="Get DiTi"){let racks=[...new Set(items.filter(x=>["DiTi 1000µL LiHa","DiTi 200µL LiHa"].includes(x.name)).map(x=>x.name))];select("tips","DiTi type available on worktable",racks,c.params.tips)}
  if(c.name==="Drop DiTi"){let wastes=items.filter(x=>x.name==="DiTi Waste").map(x=>x.label);select("waste","DiTi Waste to use",wastes,c.params.waste)}
  if(["Get DiTi","Drop DiTi"].includes(c.name)){addChannelPicker(area,c.params)}
- if(c.name==="Begin Loop"){input("loopName","Loop name",c.params.loopName||"");input("cycles","Loop cycles",c.params.cycles||1,"number",1)}
+ if(c.name==="Begin Loop"){input("loopName","Loop name",c.params.loopName||"");input("cycles","Loop cycles or variable name",c.params.cycles??1)}
  if(c.name==="End Loop")input("loopName","Loop name",c.params.loopName||"");
  if(c.name==="Start Timer"){input("timerName","Timer name",c.params.timerName||"mix_timer");input("seconds","Timer length (seconds)",c.params.seconds??30,"number",0)}
  if(c.name==="Wait for Timer")input("timerName","Timer name to wait for",c.params.timerName||"mix_timer");
@@ -190,10 +190,10 @@ function renderProperties(){
   loopOptions(c.name==="Aspirate"?"source":c.name==="Dispense"?"destination":"target")
  }
  if(c.name==="Mix"){/* mix fields are above */}
- if(c.name==="Set Variable"){input("name","Variable name",c.params.name);input("value","Value",c.params.value,"number")}
+ if(c.name==="Set Variable"){input("name","Variable name",c.params.name);input("value","Numeric value or existing variable name",c.params.value)}
  if(c.name==="If – Then")input("condition","Condition",c.params.condition);
  if(c.name==="User Prompt")input("message","Prompt message",c.params.message);
- $("applyParams").onclick=()=>{f.querySelectorAll("input,select").forEach(x=>{let k=x.dataset.key;if(!k)return;let v=x.value;c.params[k]=["volume","cycles","seconds","value"].includes(k)&&v!==""?Number(v):v});if(["Aspirate","Dispense","Mix","Get DiTi","Drop DiTi"].includes(c.name))c.params.channels=[...area.querySelectorAll(".channelcheck:checked")].map(x=>Number(x.value));validated=false;renderMethod()}
+ $("applyParams").onclick=()=>{f.querySelectorAll("input,select").forEach(x=>{let k=x.dataset.key;if(!k)return;let v=x.value;c.params[k]=["volume","seconds"].includes(k)&&v!==""?Number(v):v});if(["Aspirate","Dispense","Mix","Get DiTi","Drop DiTi"].includes(c.name))c.params.channels=[...area.querySelectorAll(".channelcheck:checked")].map(x=>Number(x.value));validated=false;renderMethod()}
 }
 function cancelLabwarePlacement(message=null){
  if(message)alert(message);
@@ -600,18 +600,29 @@ function buildExecutionPlan(){
  const endForBegin=new Map(),stack=[];
  method.forEach((command,index)=>{
   if(command.name==="Begin Loop")stack.push(index);
-  else if(command.name==="End Loop"&&stack.length){endForBegin.set(stack.pop(),index)}
+  else if(command.name==="End Loop"&&stack.length)endForBegin.set(stack.pop(),index);
  });
- const plan=[];
+ const plan=[],variables={};
+ const resolveValue=value=>{
+  const raw=String(value??"").trim();
+  if(raw!==""&&Number.isFinite(Number(raw)))return Number(raw);
+  return Object.prototype.hasOwnProperty.call(variables,raw)?variables[raw]:NaN;
+ };
  const appendRange=(from,to,path=[])=>{
   for(let i=from;i<to;i++){
-   const command=method[i];
+   const command=method[i],params=command.params||{};
    if(command.name==="Begin Loop"&&endForBegin.has(i)){
-    const end=endForBegin.get(i),cycles=Math.max(1,Math.floor(Number(command.params.cycles)||1));
+    const end=endForBegin.get(i),resolved=resolveValue(params.cycles),cycles=Math.max(1,Math.floor(Number.isFinite(resolved)?resolved:1));
     plan.push({commandIndex:i,loopPath:path,loopBoundary:"begin"});
-    for(let cycle=1;cycle<=cycles;cycle++)appendRange(i+1,end,[...path,{name:command.params.loopName||"Loop",cycle,total:cycles}]);
+    for(let cycle=1;cycle<=cycles;cycle++)appendRange(i+1,end,[...path,{name:params.loopName||"Loop",cycle,total:cycles}]);
     plan.push({commandIndex:end,loopPath:path,loopBoundary:"end"});i=end;
-   }else plan.push({commandIndex:i,loopPath:path});
+   }else{
+    plan.push({commandIndex:i,loopPath:path});
+    if(command.name==="Set Variable"){
+     const name=String(params.name||"").trim(),value=resolveValue(params.value);
+     if(name&&Number.isFinite(value))variables[name]=value;
+    }
+   }
   }
  };
  appendRange(0,method.length);
