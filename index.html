@@ -147,6 +147,23 @@ function wellLayout(item){if(item.name.startsWith("96 Well Microplate"))return {
 if(item.name==="DiTi Waste")return {rows:1,cols:1,kind:"waste"};if(item.name.startsWith("DiTi"))return {rows:8,cols:1,kind:"tips"};return {rows:1,cols:1,kind:"single"}}
 function mountedTipTypesBefore(index){let mounted={};for(let i=0;i<index;i++){let c=method[i];if(c.name==="Get DiTi"){(c.params.channels||[]).forEach(ch=>mounted[ch]=c.params.tips)}if(c.name==="Drop DiTi"){(c.params.channels||[]).forEach(ch=>delete mounted[ch])}}return mounted}
 function selectedChannels(p){return (p.channels||[]).map(Number).sort((a,b)=>a-b)}
+
+function evaluateNumericExpression(expression,variables={}){
+ const source=String(expression??"").trim();if(!source)return NaN;
+ const tokens=source.match(/[A-Za-z_][A-Za-z0-9_]*|(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][+-]?\\d+)?|[()+\\-*/]/g)||[];
+ if(tokens.join("").replace(/\\s/g,"")!==source.replace(/\\s/g,""))return NaN;
+ let index=0;
+ const primary=()=>{const token=tokens[index++];if(token==="("){const value=add();if(tokens[index++]!==")")throw Error("parenthesis");return value}
+  if(token==="+"||token==="-"){const value=primary();return token==="-"?-value:value}
+  if(token&&/^(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][+-]?\\d+)?$/.test(token))return Number(token);
+  if(token&&/^[A-Za-z_]/.test(token)){const key=token.toUpperCase();return Object.prototype.hasOwnProperty.call(variables,key)?Number(variables[key]):NaN}
+  throw Error("token");
+ };
+ const multiply=()=>{let value=primary();while(tokens[index]==="*"||tokens[index]==="/"){const op=tokens[index++],right=primary();value=op==="*"?value*right:value/right}return value};
+ const add=()=>{let value=multiply();while(tokens[index]==="+"||tokens[index]==="-"){const op=tokens[index++],right=multiply();value=op==="+"?value+right:value-right}return value};
+ try{const value=add();return index===tokens.length&&Number.isFinite(value)?value:NaN}catch{return NaN}
+}
+
 function addChannelPicker(area,params,onChange,allowedChannels=null){const wrap=document.createElement("div"),title=document.createElement("div"),strip=document.createElement("div");title.textContent="LiHa channels";title.style.cssText="font-size:11px;font-weight:bold;margin:7px 0";strip.style.cssText="display:grid;grid-template-columns:repeat(8,minmax(30px,1fr));gap:5px";const allLabel=document.createElement("label");allLabel.style.cssText="display:flex;align-items:center;gap:6px;font-size:11px;margin:5px 0";const all=document.createElement("input");all.type="checkbox";all.checked=allowedChannels?allowedChannels.every(n=>selectedChannels(params).includes(n)):selectedChannels(params).length===8;allLabel.append(all,"Select all mounted channels");all.onchange=()=>{params.channels=all.checked?(allowedChannels?[...allowedChannels]:[1,2,3,4,5,6,7,8]):[];strip.querySelectorAll(".channelcheck").forEach(x=>{x.checked=params.channels.includes(Number(x.value))});if(onChange)onChange()};for(let n=1;n<=8;n++){let l=document.createElement("label");l.style.cssText="display:flex;justify-content:center;align-items:center;gap:3px;border:1px solid #bdc8d2;padding:6px 1px;font-size:11px";let cb=document.createElement("input");cb.type="checkbox";cb.className="channelcheck";cb.value=n;cb.checked=selectedChannels(params).includes(n);cb.disabled=!!allowedChannels&&!allowedChannels.includes(n);cb.onchange=()=>{params.channels=[...strip.querySelectorAll(".channelcheck:checked")].map(x=>Number(x.value));all.checked=allowedChannels?allowedChannels.every(n=>params.channels.includes(n)):params.channels.length===8;if(onChange)onChange()};l.append(cb,String(n));strip.append(l)}wrap.append(title,allLabel,strip);area.append(wrap);return strip;}
 
 function renderLibrary(tab){let el=$("library");el.innerHTML="";(categories[tab]||[]).forEach(([cat,items])=>{let h=document.createElement("div");h.className="cat";h.textContent=cat;el.append(h);items.forEach(name=>{let b=document.createElement("div");b.className="libitem";b.draggable=true;b.innerHTML=`<span class="glyph">${icons[name]||"▦"}</span><span>${name}</span>`;b.addEventListener("dragstart",e=>{dragMove=null;dragItem={name,kind:tab==="Carriers"?"carrier":tab==="Labware"?"labware":tab==="Commands"?"command":"reference"};if(dragItem.kind==="carrier"||dragItem.kind==="labware"){$("properties").classList.add("compact");$("properties").innerHTML='<div style="font-size:11px;color:#526476"><b>Worktable placement</b> — Drop '+name+' onto the worktable to place it.</div>'}e.dataTransfer.setData("text/plain",name)});b.addEventListener("click",()=>{dragMove=null;dragItem={name,kind:tab==="Carriers"?"carrier":tab==="Labware"?"labware":tab==="Commands"?"command":"reference"};if(dragItem.kind==="command")addCommand(name);else if(dragItem.kind==="carrier"||dragItem.kind==="labware"){$("properties").classList.add("compact");$("properties").innerHTML='<div style="font-size:11px;color:#526476"><b>Worktable placement</b> — '+name+' selected. Drag it onto the worktable.</div>';$ ("deckInfo").textContent=`Selected ${name}. Drag it onto the worktable${dragItem.kind==="labware"?" and choose a carrier site":" position"}.`;}else $("deckInfo").textContent=`Liquid class selected: ${name}. Set this in the command properties.`});el.append(b)})})}
@@ -564,7 +581,7 @@ async function waitForNamedTimer(timerName,token){
  if(token!==simulationRunId)return;
  log("TIMER COMPLETE: "+timerName);
 }
-async function executeSimulationCommand(command,token,loopPath=[],sampleChannels=null){
+async function executeSimulationCommand(command,token,loopPath=[],sampleChannels=null,variableValues={}){
  const simulatedCommand={...command,params:{...(command.params||{})}};
  if(Array.isArray(sampleChannels)&&["Get DiTi","Drop DiTi","Aspirate","Dispense","Mix"].includes(command.name)){
   const originalChannels=selectedChannels(command.params||{});
@@ -575,6 +592,9 @@ async function executeSimulationCommand(command,token,loopPath=[],sampleChannels
    simulatedCommand.params.wells=indexedWells.filter(x=>keep.has(x.channel)).map(x=>x.well);
   }
  }
+ const numericKeys=["volume","seconds","cycles"];
+ for(const key of numericKeys){if(simulatedCommand.params[key]!==undefined){const value=evaluateNumericExpression(simulatedCommand.params[key],variableValues);if(Number.isFinite(value))simulatedCommand.params[key]=value}}
+ if(simulatedCommand.params.loopOptions){for(const scope of ["source","destination","target"]){const options=simulatedCommand.params.loopOptions[scope]||{};for(const dimension of ["column","row","well"]){if(options[dimension]?.step!==undefined){const value=evaluateNumericExpression(options[dimension].step,variableValues);if(Number.isFinite(value))options[dimension].step=value}}}}
  const activeCommand=applyLoopWellOffsets(simulatedCommand,loopPath);
  const label=commandTarget(activeCommand),wells=commandWells(activeCommand);
  $("simAction").textContent=describeSimulationCommand(activeCommand);
@@ -583,7 +603,7 @@ async function executeSimulationCommand(command,token,loopPath=[],sampleChannels
  if(token!==simulationRunId)return;
  if(activeCommand.name==="Get DiTi")selectedChannels(activeCommand.params).forEach(ch=>mountedSimulationChannels[ch]=activeCommand.params.tips);
  if(activeCommand.name==="Drop DiTi")selectedChannels(activeCommand.params).forEach(ch=>delete mountedSimulationChannels[ch]);
- if(command.name==="Start Timer"){const timerName=String(command.params.timerName||"").trim();simulationTimers[timerName]={startedAt:Date.now(),durationMs:Math.max(0,Number(command.params.seconds)||0)*1000};log("TIMER STARTED: "+timerName+" ("+command.params.seconds+" seconds)")}
+ if(activeCommand.name==="Start Timer"){const timerName=String(activeCommand.params.timerName||"").trim();simulationTimers[timerName]={startedAt:Date.now(),durationMs:Math.max(0,Number(activeCommand.params.seconds)||0)*1000};log("TIMER STARTED: "+timerName+" ("+activeCommand.params.seconds+" seconds)")}
  if(command.name==="Wait for Timer")await waitForNamedTimer(String(command.params.timerName||"").trim(),token);
  if(token!==simulationRunId)return;
  updateSimulationArmTips();
@@ -675,11 +695,7 @@ function buildExecutionPlan(){
  });
  const plan=[],variables={};
  const selectedChannels=params=>(params.channels||[]).map(Number).sort((a,b)=>a-b);
- const resolveValue=value=>{
-  const raw=String(value??"").trim();
-  if(raw!==""&&Number.isFinite(Number(raw)))return Number(raw);
-  return Object.prototype.hasOwnProperty.call(variables,raw.toUpperCase())?variables[raw.toUpperCase()]:NaN;
- };
+ const resolveValue=value=>evaluateNumericExpression(value,variables);
  const sampleChannelsInRange=(from,to)=>{
   const used=new Set();
   for(let i=from;i<to;i++){
@@ -701,13 +717,13 @@ function buildExecutionPlan(){
      const tipsPerCycle=usedChannels.length;
      if(requested>0&&tipsPerCycle>0){
       const total=Math.ceil(requested/tipsPerCycle);
-      plan.push({commandIndex:i,loopPath:path,loopBoundary:"begin",sampleCount:requested,tipsPerCycle});
+      plan.push({commandIndex:i,loopPath:path,loopBoundary:"begin",sampleCount:requested,tipsPerCycle,variables:{...variables}});
       let remaining=requested;
       for(let cycle=1;cycle<=total;cycle++){
        const activeChannels=usedChannels.slice(0,Math.min(tipsPerCycle,remaining));
        const cyclePath=[...path,{name:loopName,cycle,total,sampleRemaining:remaining}];
        appendRange(i+1,end,cyclePath,activeChannels);
-       plan.push({commandIndex:end,loopPath:cyclePath,loopBoundary:"end",sampleCountRemaining:Math.max(0,remaining-tipsPerCycle)});
+       plan.push({commandIndex:end,loopPath:cyclePath,loopBoundary:"end",sampleCountRemaining:Math.max(0,remaining-tipsPerCycle),variables:{...variables}});
        remaining=Math.max(0,remaining-tipsPerCycle);
       }
       variables.SAMPLE_CNT=0;
@@ -717,16 +733,16 @@ function buildExecutionPlan(){
      }
     }else{
      const resolved=resolveValue(rawCycles),cycles=Math.max(1,Math.floor(Number.isFinite(resolved)?resolved:1));
-     plan.push({commandIndex:i,loopPath:path,loopBoundary:"begin"});
+     plan.push({commandIndex:i,loopPath:path,loopBoundary:"begin",variables:{...variables}});
      for(let cycle=1;cycle<=cycles;cycle++){
       const cyclePath=[...path,{name:loopName,cycle,total:cycles}];
       appendRange(i+1,end,cyclePath,sampleMask);
-      plan.push({commandIndex:end,loopPath:cyclePath,loopBoundary:"end"});
+      plan.push({commandIndex:end,loopPath:cyclePath,loopBoundary:"end",variables:{...variables}});
      }
     }
     i=end;
    }else{
-    plan.push({commandIndex:i,loopPath:path,sampleChannels:sampleMask});
+    plan.push({commandIndex:i,loopPath:path,sampleChannels:sampleMask,variables:{...variables}});
     if(command.name==="Set Variable"){
      const name=String(params.name||"").trim(),value=Object.prototype.hasOwnProperty.call(overrides,name)?Number(overrides[name]):resolveValue(params.value);
      if(name&&Number.isFinite(value))variables[name.toUpperCase()]=value;
@@ -765,7 +781,7 @@ async function nextStep(){
  const iteration=step.loopPath.length?" — "+step.loopPath.map(x=>x.name+" "+x.cycle+"/"+x.total).join(" › "):"";
  $("status").textContent="STATUS: RUNNING";$("runFeedback").textContent="Command "+(index+1)+iteration+": "+command.name;
  log("COMMAND "+(index+1)+": "+command.name.toUpperCase()+iteration);
- await executeSimulationCommand(command,token,step.loopPath,step.sampleChannels);
+ await executeSimulationCommand(command,token,step.loopPath,step.sampleChannels,step.variables||{});
  if(token!==simulationRunId)return;
  runIndex++;
  $("progress").style.width=(runIndex/runSteps.length*100)+"%";$("percent").textContent=Math.round(runIndex/runSteps.length*100)+"%";
