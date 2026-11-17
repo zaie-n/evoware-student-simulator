@@ -491,11 +491,11 @@ test("a rack-level command cannot select an empty tube carrier position", () => 
   assert.equal(hasMessage(findings, "Carrier position 2 on Elution Rack are empty"), true);
 });
 
-test("rack-level tube positions must be consecutive and ordered, independent of channel numbers", () => {
+test("rack-level tube positions must start at the top and follow carrier order", () => {
   const deck = [
     { name: "Tube 13mm 16 Pos", rackLabel: "Elution Rack", items: [
       { name: "0.2mL tube", label: "Tube 1" },
-      null,
+      { name: "0.2mL tube", label: "Tube 2" },
       { name: "0.2mL tube", label: "Tube 3" },
       ...Array(13).fill(null)
     ] },
@@ -503,10 +503,10 @@ test("rack-level tube positions must be consecutive and ordered, independent of 
   ];
   const findings = findingsFor([
     { name: "Get DiTi", params: { tips: "DiTi 200µL LiHa", channels: [2, 5] } },
-    aspirate({ source: "Elution Rack", channels: [2, 5], wells: ["1", "3"] })
+    aspirate({ source: "Elution Rack", channels: [2, 5], wells: ["2", "3"] })
   ], deck);
   assert.equal(hasErrorAt(findings, 2), true);
-  assert.equal(hasMessage(findings, "Tube carrier positions must be consecutive and in carrier order"), true);
+  assert.equal(hasMessage(findings, "Mounted channels map to the top tube carrier positions starting at position 1"), true);
 });
 
 test("a single tube outside a 16-position rack cannot serve multiple channels", () => {
