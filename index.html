@@ -688,11 +688,12 @@ function buildExecutionPlan(){
       let remaining=requested;
       for(let cycle=1;cycle<=total;cycle++){
        const activeChannels=usedChannels.slice(0,Math.min(tipsPerCycle,remaining));
-       appendRange(i+1,end,[...path,{name:loopName,cycle,total,sampleRemaining:remaining}],activeChannels);
+       const cyclePath=[...path,{name:loopName,cycle,total,sampleRemaining:remaining}];
+       appendRange(i+1,end,cyclePath,activeChannels);
+       plan.push({commandIndex:end,loopPath:cyclePath,loopBoundary:"end",sampleCountRemaining:Math.max(0,remaining-tipsPerCycle)});
        remaining=Math.max(0,remaining-tipsPerCycle);
       }
       variables.SAMPLE_CNT=0;
-      plan.push({commandIndex:end,loopPath:path,loopBoundary:"end",sampleCountRemaining:0});
      }else{
       plan.push({commandIndex:i,loopPath:path,loopBoundary:"begin",sampleCount:requested,tipsPerCycle});
       plan.push({commandIndex:end,loopPath:path,loopBoundary:"end",sampleCountRemaining:requested});
@@ -700,8 +701,11 @@ function buildExecutionPlan(){
     }else{
      const resolved=resolveValue(rawCycles),cycles=Math.max(1,Math.floor(Number.isFinite(resolved)?resolved:1));
      plan.push({commandIndex:i,loopPath:path,loopBoundary:"begin"});
-     for(let cycle=1;cycle<=cycles;cycle++)appendRange(i+1,end,[...path,{name:loopName,cycle,total:cycles}],sampleMask);
-     plan.push({commandIndex:end,loopPath:path,loopBoundary:"end"});
+     for(let cycle=1;cycle<=cycles;cycle++){
+      const cyclePath=[...path,{name:loopName,cycle,total:cycles}];
+      appendRange(i+1,end,cyclePath,sampleMask);
+      plan.push({commandIndex:end,loopPath:cyclePath,loopBoundary:"end"});
+     }
     }
     i=end;
    }else{
