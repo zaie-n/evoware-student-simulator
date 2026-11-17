@@ -24,7 +24,7 @@ assert.ok(html.includes('timer.startedAt+timer.durationMs-Date.now()') && html.i
 assert.ok(html.includes('simulationTimers={};mountedSimulationChannels={};'), "A fresh simulation run must clear prior timer state");
 
 assert.ok(html.includes('id="pauseRun"') && html.includes('id="simAction"'), "Live simulation must expose pause and current-action feedback");
-assert.ok(html.includes("async function executeSimulationCommand(command,token,loopPath=[])"), "Run simulation must execute commands through the live simulation engine");
+assert.ok(html.includes("async function executeSimulationCommand(command,token,loopPath=[],sampleChannels=null)"), "Run simulation must execute commands through the live simulation engine");
 assert.ok(html.includes("function moveSimulationArm(label,wells=[])"), "Live worktable must animate the arm to configured labware and wells");
 assert.ok(html.includes('setAttribute("class","simulation-arm-layer")'), "Worktable must include an animated LiHa arm overlay");
 assert.ok(html.includes("simulationPlaying=true"), "Run simulation must execute the method continuously");
