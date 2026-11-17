@@ -164,6 +164,7 @@ assert.ok(html.includes('z.className="tube-rack-position empty dropzone"') && ht
 assert.ok(html.includes('L.kind==="single"?n===1'), "A standalone tube should not be shared across multiple selected channels");
 assert.ok(html.includes('occupied=L.kind!=="tubes"||!!item.rackItems?.[r]'), "The liquid-handling picker must grey out empty tube carrier positions");
 assert.ok(html.includes('L.kind==="tubes"?r+index:r+channelOffsets[index]'), "Mounted channels must map sequentially to the selected carrier positions, independent of channel numbering");
+assert.ok(html.includes('L.kind==="tubes"?(r===0&&occupied&&n>0'), "Mounted channels must start at the top of the tube carrier");
 assert.ok(html.includes("Tube 13mm 16 Pos — Rack "), "Each tube carrier must retain a unique rack-level labware label");
 assert.ok(html.includes('carrier[data-label]'), "The simulation arm should target the tube carrier as a whole");
 
