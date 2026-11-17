@@ -79,7 +79,7 @@ main{padding:10px;max-width:1600px;margin:auto}
  </section>
  <div class="workspace-column">
   <section class="panel">
-   <div class="phead">Script Editor <span id="commandCount" style="font-weight:400">0 commands</span></div>
+   <div class="phead">Script Editor <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><button class="btn" id="loadBead8" type="button">Load 8-sample bead cleanup</button><button class="btn" id="loadBeadVariable" type="button">Load variable 1–16 bead cleanup</button><span id="commandCount" style="font-weight:400">0 commands</span></span></div>
    <div class="script" id="script">
     <div class="empty">Drag commands here to build your method.<br><br>Commands can be selected to edit their properties and dragged to reorder.</div>
    </div>
@@ -149,6 +149,50 @@ function selectedChannels(p){return (p.channels||[]).map(Number).sort((a,b)=>a-b
 function addChannelPicker(area,params,onChange,allowedChannels=null){const wrap=document.createElement("div"),title=document.createElement("div"),strip=document.createElement("div");title.textContent="LiHa channels";title.style.cssText="font-size:11px;font-weight:bold;margin:7px 0";strip.style.cssText="display:grid;grid-template-columns:repeat(8,minmax(30px,1fr));gap:5px";const allLabel=document.createElement("label");allLabel.style.cssText="display:flex;align-items:center;gap:6px;font-size:11px;margin:5px 0";const all=document.createElement("input");all.type="checkbox";all.checked=allowedChannels?allowedChannels.every(n=>selectedChannels(params).includes(n)):selectedChannels(params).length===8;allLabel.append(all,"Select all mounted channels");all.onchange=()=>{params.channels=all.checked?(allowedChannels?[...allowedChannels]:[1,2,3,4,5,6,7,8]):[];strip.querySelectorAll(".channelcheck").forEach(x=>{x.checked=params.channels.includes(Number(x.value))});if(onChange)onChange()};for(let n=1;n<=8;n++){let l=document.createElement("label");l.style.cssText="display:flex;justify-content:center;align-items:center;gap:3px;border:1px solid #bdc8d2;padding:6px 1px;font-size:11px";let cb=document.createElement("input");cb.type="checkbox";cb.className="channelcheck";cb.value=n;cb.checked=selectedChannels(params).includes(n);cb.disabled=!!allowedChannels&&!allowedChannels.includes(n);cb.onchange=()=>{params.channels=[...strip.querySelectorAll(".channelcheck:checked")].map(x=>Number(x.value));all.checked=allowedChannels?allowedChannels.every(n=>params.channels.includes(n)):params.channels.length===8;if(onChange)onChange()};l.append(cb,String(n));strip.append(l)}wrap.append(title,allLabel,strip);area.append(wrap);return strip;}
 
 function renderLibrary(tab){let el=$("library");el.innerHTML="";(categories[tab]||[]).forEach(([cat,items])=>{let h=document.createElement("div");h.className="cat";h.textContent=cat;el.append(h);items.forEach(name=>{let b=document.createElement("div");b.className="libitem";b.draggable=true;b.innerHTML=`<span class="glyph">${icons[name]||"▦"}</span><span>${name}</span>`;b.addEventListener("dragstart",e=>{dragMove=null;dragItem={name,kind:tab==="Carriers"?"carrier":tab==="Labware"?"labware":tab==="Commands"?"command":"reference"};if(dragItem.kind==="carrier"||dragItem.kind==="labware"){$("properties").classList.add("compact");$("properties").innerHTML='<div style="font-size:11px;color:#526476"><b>Worktable placement</b> — Drop '+name+' onto the worktable to place it.</div>'}e.dataTransfer.setData("text/plain",name)});b.addEventListener("click",()=>{dragMove=null;dragItem={name,kind:tab==="Carriers"?"carrier":tab==="Labware"?"labware":tab==="Commands"?"command":"reference"};if(dragItem.kind==="command")addCommand(name);else if(dragItem.kind==="carrier"||dragItem.kind==="labware"){$("properties").classList.add("compact");$("properties").innerHTML='<div style="font-size:11px;color:#526476"><b>Worktable placement</b> — '+name+' selected. Drag it onto the worktable.</div>';$ ("deckInfo").textContent=`Selected ${name}. Drag it onto the worktable${dragItem.kind==="labware"?" and choose a carrier site":" position"}.`;}else $("deckInfo").textContent=`Liquid class selected: ${name}. Set this in the command properties.`});el.append(b)})})}
+
+function makeBeadCleanupMethod(variableSamples){
+ const channels=[1,2,3,4,5,6,7,8],plateWells=["A1","B1","C1","D1","E1","F1","G1","H1"],troughWells=["1","2","3","4","5","6","7","8"],tubeWells=["1","2","3","4","5","6","7","8"];
+ const plateLoop={enabled:true,source:{},destination:{column:{enabled:true,step:1}},target:{column:{enabled:true,step:1}}};
+ const sourcePlateLoop={enabled:true,source:{column:{enabled:true,step:1}},destination:{},target:{}};
+ const tubeOutputLoop={enabled:true,source:{column:{enabled:true,step:1}},destination:{row:{enabled:true,step:8}},target:{}};
+ const cmds=[],add=(name,params={})=>cmds.push({name,params,id:Math.random().toString(36).slice(2)});
+ const userPrompt=message=>add("User Prompt",{message}),timer=(name,seconds)=>{add("Start Timer",{timerName:name,seconds});add("Wait for Timer",{timerName:name})};
+ const setSamples=()=>add("Set Variable",{name:"SAMPLE_CNT",value:variableSamples?"Num_Samples":8});
+ const beginSampleLoop=name=>{setSamples();add("Begin Loop",{loopName:name,cycles:"SAMPLE_CNT"})},endSampleLoop=name=>add("End Loop",{loopName:name});
+ const getTips=(type="DiTi 200µL LiHa")=>add("Get DiTi",{tips:type,channels:[...channels]}),dropTips=()=>add("Drop DiTi",{waste:"Tip Waste",channels:[...channels]});
+ const mix=(target,wells,volume,cycles,loopOptions=null)=>add("Mix",{target,wells:[...wells],volume,cycles,channels:[...channels],...(loopOptions?{loopOptions}:{})});
+ const aspirate=(source,wells,volume,liquidClass="Water",loopOptions=null)=>add("Aspirate",{source,wells:[...wells],volume,liquidClass,channels:[...channels],...(loopOptions?{loopOptions}:{})});
+ const dispense=(destination,wells,volume,liquidClass="Water",loopOptions=null)=>add("Dispense",{destination,wells:[...wells],volume,liquidClass,channels:[...channels],...(loopOptions?{loopOptions}:{})});
+ const ethanolWash=(suffix)=>{
+  beginSampleLoop("EtOH addition "+suffix);getTips("DiTi 1000µL LiHa");aspirate("80 percent EtOH",troughWells,200,"Ethanol");dispense("Mag Plate",plateWells,200,"Ethanol",plateLoop);dropTips();endSampleLoop("EtOH addition "+suffix);
+  beginSampleLoop("EtOH discard "+suffix);getTips();aspirate("Mag Plate",plateWells,200,"Ethanol",sourcePlateLoop);dropTips();endSampleLoop("EtOH discard "+suffix);
+ };
+ userPrompt("Bead cleanup assumptions:\n• Each sample well contains 20 µL DNA.\n• SPRI bead-to-sample ratio is 1.8:1 (36 µL beads per sample).\n• The template starts with all eight LiHa channels selected. Students may change channel selections in individual commands.");
+ if(variableSamples)add("Set Variable",{name:"Num_Samples",value:8,askAtRun:true,prompt:"Enter the number of samples for this run (1–16).",min:1,max:16});
+ beginSampleLoop("Bead pipetting");getTips();mix("SPRI Beads",troughWells,200,3);aspirate("SPRI Beads",troughWells,36);dispense("Bead Plate",plateWells,36,"Water",plateLoop);mix("Bead Plate",plateWells,30,3,plateLoop);dropTips();endSampleLoop("Bead pipetting");
+ timer("Bead_Mix",300);userPrompt("Move the Bead Plate to the magnetic position. Allow the beads to separate for 5 minutes.");timer("Magnetic_Separation",300);
+ beginSampleLoop("Supernatant discard");getTips();aspirate("Mag Plate",plateWells,160,"Water",sourcePlateLoop);dropTips();endSampleLoop("Supernatant discard");
+ ethanolWash("1");ethanolWash("2");
+ userPrompt("Inspect the plate. If residual ethanol remains, remove it manually. Ensure all ethanol has been removed.");
+ userPrompt("Move the Bead Plate off the magnet to the resuspension position.");userPrompt("Dry the beads. Matte = well dried; shiny = still wet; cracked = overdried.");timer("Bead_Drying",240);userPrompt("Check the beads. Proceed only when the beads are dry and appear matte.");
+ beginSampleLoop("Resuspend Beads");getTips();aspirate("Resuspension Buffer",troughWells,35);dispense("Bead Plate",plateWells,35,"Water",plateLoop);mix("Bead Plate",plateWells,15,3,plateLoop);dropTips();endSampleLoop("Resuspend Beads");
+ timer("Resuspension",240);userPrompt("Move the Bead Plate onto the magnet. In the simulator, ensure the 16-position Elution Tubes rack is loaded at worktable position 5 and the labeled tubes are ready.");timer("Elution_Magnetic_Separation",300);
+ beginSampleLoop("Elution");getTips();aspirate("Mag Plate",plateWells,15,"Water",sourcePlateLoop);dispense("Elution Tubes",tubeWells,15,"Water",tubeOutputLoop);dropTips();endSampleLoop("Elution");
+ userPrompt("Close the filled tubes and store them on ice. The single elution loop supports up to 16 samples; no second tube-rack refill cycle is needed.");
+ return cmds;
+}
+function loadBeadCleanupTemplate(variableSamples){
+ const label=variableSamples?"variable 1–16-sample":"fixed 8-sample";
+ if(method.length&&!confirm("Replace the current method with the "+label+" bead-cleanup template?"))return;
+ method=makeBeadCleanupMethod(variableSamples);deck=Array.from({length:8},()=>null);
+ deck[0]={name:"MP 4Pos flat",items:[{name:"96 Well Microplate",label:"Bead Plate"},null,null,null]};
+ deck[1]={name:"MP 4Pos flat - MagPlate",items:[{name:"96 Well Microplate - MagPlat",label:"Mag Plate"},null,null,null]};
+ deck[2]={name:"DiTi 2Pos + Waste",items:[{name:"DiTi 200µL LiHa",label:"200 µL Tips"},{name:"DiTi 1000µL LiHa",label:"1000 µL Tips"},{name:"DiTi Waste",label:"Tip Waste"}]};
+ deck[3]={name:"Trough 3Pos 25+100ml",items:[{name:"Trough 100ml",label:"SPRI Beads"},{name:"Trough 100ml",label:"80 percent EtOH"},{name:"Trough 100ml",label:"Resuspension Buffer"}]};
+ deck[4]={name:"Tube 13mm 16 Pos",items:[{name:"1.5mL tube",label:"Elution Tubes"},...Array(15).fill(null)]};
+ selected=-1;selectedDeck=null;validated=false;runIndex=0;runSteps=[];simulationPlaying=false;simulationBusy=false;simulationRunId++;clearTimeout(simulationTimer);mountedSimulationChannels={};simulationTimers={};updateSimulationArmTips();clearSimulationHighlight();renderMethod();renderDeck();$("validationPanel").classList.remove("visible");$("status").textContent="STATUS: NOT VALIDATED";$("runFeedback").textContent="Template loaded. Validate the method before running.";$("run").disabled=true;$("stepRun").disabled=true;log("LOADED "+label.toUpperCase()+" BEAD-CLEANUP TEMPLATE");
+}
+
 function addCommand(name,index=method.length){selectedDeck=null;updateDeckSelectionHighlight();let item={name,params:{...(defaults[name]||{})},id:Math.random().toString(36).slice(2)};method.splice(Math.max(0,Math.min(index,method.length)),0,item);selected=method.findIndex(x=>x.id===item.id);validated=false;renderMethod()}
 function renderMethod(){
  let s=$("script");s.innerHTML="";if(!method.length)s.innerHTML='<div class="empty">Drag commands here to build your method.</div>';
@@ -190,10 +234,10 @@ function renderProperties(){
   loopOptions(c.name==="Aspirate"?"source":c.name==="Dispense"?"destination":"target")
  }
  if(c.name==="Mix"){/* mix fields are above */}
- if(c.name==="Set Variable"){input("name","Variable name",c.params.name);input("value","Numeric value or existing variable name",c.params.value)}
+ if(c.name==="Set Variable"){input("name","Variable name",c.params.name);input("value","Numeric value or existing variable name",c.params.value);const ask=document.createElement("input");ask.type="checkbox";ask.checked=!!c.params.askAtRun;field("askAtRun","Ask for this value at run time",ask);if(c.params.askAtRun){input("prompt","Run-time prompt",c.params.prompt||"Enter a value");input("min","Minimum value",c.params.min??1,"number",0);input("max","Maximum value",c.params.max??16,"number",1)}}
  if(c.name==="If – Then")input("condition","Condition",c.params.condition);
  if(c.name==="User Prompt")input("message","Prompt message",c.params.message);
- $("applyParams").onclick=()=>{f.querySelectorAll("input,select").forEach(x=>{let k=x.dataset.key;if(!k)return;let v=x.value;c.params[k]=["volume","seconds"].includes(k)&&v!==""?Number(v):v});if(["Aspirate","Dispense","Mix","Get DiTi","Drop DiTi"].includes(c.name))c.params.channels=[...area.querySelectorAll(".channelcheck:checked")].map(x=>Number(x.value));validated=false;renderMethod()}
+ $("applyParams").onclick=()=>{f.querySelectorAll("input,select").forEach(x=>{let k=x.dataset.key;if(!k)return;let v=x.type==="checkbox"?x.checked:x.value;c.params[k]=["volume","seconds","min","max"].includes(k)&&v!==""?Number(v):v});if(["Aspirate","Dispense","Mix","Get DiTi","Drop DiTi"].includes(c.name))c.params.channels=[...area.querySelectorAll(".channelcheck:checked")].map(x=>Number(x.value));validated=false;renderMethod()}
 }
 function cancelLabwarePlacement(message=null){
  if(message)alert(message);
@@ -606,7 +650,7 @@ function validate(){
  $("run").disabled=!validated;$("stepRun").disabled=!validated;
  log(validated?"METHOD READY":"VALIDATION ERRORS FOUND");
 }
-function buildExecutionPlan(){
+function buildExecutionPlan(overrides={}){
  const endForBegin=new Map(),stack=[];
  method.forEach((command,index)=>{
   if(command.name==="Begin Loop")stack.push(index);
@@ -662,7 +706,7 @@ function buildExecutionPlan(){
    }else{
     plan.push({commandIndex:i,loopPath:path,sampleChannels:sampleMask});
     if(command.name==="Set Variable"){
-     const name=String(params.name||"").trim(),value=resolveValue(params.value);
+     const name=String(params.name||"").trim(),value=Object.prototype.hasOwnProperty.call(overrides,name)?Number(overrides[name]):resolveValue(params.value);
      if(name&&Number.isFinite(value))variables[name.toUpperCase()]=value;
     }
    }
@@ -672,9 +716,17 @@ function buildExecutionPlan(){
  return plan;
 }
 function prepareRun(){
- simulationRunId++;simulationPlaying=false;simulationBusy=false;clearTimeout(simulationTimer);runIndex=0;runSteps=buildExecutionPlan();simulationTimers={};mountedSimulationChannels={};updateSimulationArmTips();clearSimulationHighlight();
+ const overrides={};
+ for(const command of method){const p=command.params||{};if(command.name!=="Set Variable"||!p.askAtRun)continue;
+  const entered=prompt(p.prompt||("Enter "+(p.name||"value")),String(p.value??""));
+  if(entered===null){$("runFeedback").textContent="Run cancelled. No simulation steps were started.";return false}
+  const value=Number(entered),min=Number(p.min??1),max=Number(p.max??16);
+  if(!Number.isInteger(value)||value<min||value>max){alert("Enter a whole number from "+min+" to "+max+".");$("runFeedback").textContent="Run not started. The sample count must be a whole number from "+min+" to "+max+".";return false}
+  overrides[p.name]=value;
+ }
+ simulationRunId++;simulationPlaying=false;simulationBusy=false;clearTimeout(simulationTimer);runIndex=0;runSteps=buildExecutionPlan(overrides);simulationTimers={};mountedSimulationChannels={};updateSimulationArmTips();clearSimulationHighlight();
  $("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent="STATUS: READY TO RUN";$("runFeedback").textContent="Simulation ready. "+runSteps.length+" execution steps, including loop iterations.";
- $("stepRun").disabled=!runSteps.length;$("pauseRun").hidden=true;$("run").textContent="▶ Run simulation";
+ $("stepRun").disabled=!runSteps.length;$("pauseRun").hidden=true;$("run").textContent="▶ Run simulation";return true;
 }
 async function nextStep(){
  if(!validated||simulationBusy||runIndex>=runSteps.length)return;
@@ -705,7 +757,7 @@ async function nextStep(){
 }
 function startOrResumeSimulation(){
  if(!validated)validate();if(!validated)return;
- if(runIndex===0||runIndex>=runSteps.length)prepareRun();
+ if((runIndex===0||runIndex>=runSteps.length)&&!prepareRun())return;
  simulationPlaying=true;$("pauseRun").hidden=false;$("stepRun").disabled=true;$("run").textContent="▶ Running...";$("run").disabled=true;$("status").textContent="STATUS: RUNNING";
  if(!simulationBusy)nextStep();
 }
@@ -717,9 +769,10 @@ function pauseSimulation(){
 $("tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("tabs").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));renderLibrary(b.dataset.tab)});
 $("script").addEventListener("dragover",e=>{if(!dragCommandId)e.preventDefault()});$("script").addEventListener("drop",e=>{if(dragCommandId)return;e.preventDefault();if(dragItem?.kind==="command"){addCommand(dragItem.name);dragItem=null}});
 $("validate").onclick=validate;$("run").onclick=startOrResumeSimulation;$("pauseRun").onclick=pauseSimulation;
-$("stepRun").onclick=()=>{if(runIndex===0||runIndex>=runSteps.length)prepareRun();simulationPlaying=false;$("pauseRun").hidden=true;$("run").disabled=false;$("run").textContent="▶ Run simulation";nextStep()};
+$("stepRun").onclick=()=>{if((runIndex===0||runIndex>=runSteps.length)&&!prepareRun())return;simulationPlaying=false;$("pauseRun").hidden=true;$("run").disabled=false;$("run").textContent="▶ Run simulation";nextStep()};
 $("resetRun").onclick=()=>{simulationRunId++;simulationPlaying=false;simulationBusy=false;clearTimeout(simulationTimer);$("validationPanel").classList.remove("visible");runIndex=0;runSteps=[];simulationTimers={};mountedSimulationChannels={};updateSimulationArmTips();clearSimulationHighlight();$("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent=validated?"STATUS: READY":"STATUS: NOT VALIDATED";$("stepRun").disabled=!validated;$("pauseRun").hidden=true;$("run").disabled=!validated;$("run").textContent="▶ Run simulation";$("simAction").textContent="Simulation reset. Ready to run again.";$("log").innerHTML="SIMULATION RESET"};
 $("toggleInfopad").onclick=()=>{const panel=$("infopadPanel"),collapsed=panel.classList.toggle("collapsed");$("toggleInfopad").textContent=collapsed?"Expand":"Collapse";$("toggleInfopad").setAttribute("aria-expanded",String(!collapsed))};
+$("loadBead8").onclick=()=>loadBeadCleanupTemplate(false);$("loadBeadVariable").onclick=()=>loadBeadCleanupTemplate(true);
 renderLibrary("Commands");renderMethod();renderDeck();$("run").disabled=true;$("stepRun").disabled=true;
 })();
 </script>
