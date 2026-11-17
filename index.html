@@ -168,7 +168,7 @@ function renderProperties(){
  const input=(k,l,v,t="text",min=null)=>{let e=document.createElement("input");e.type=t;e.value=v??"";if(min!==null)e.min=min;field(k,l,e)};
  const select=(k,l,opts,v)=>{let e=document.createElement("select");opts.forEach(x=>{let o=document.createElement("option");o.value=x;o.textContent=x;e.append(o)});e.value=v||"";field(k,l,e);return e};
  const labware=(k,l,v)=>{let e=document.createElement("select");e.innerHTML='<option value="">Select labeled labware</option>';items.forEach(x=>{let o=document.createElement("option");o.value=x.label;o.textContent=x.label+" — "+x.name;e.append(o)});e.value=v||"";field(k,l,e);return e};
- const loopOptions=scope=>{c.params.loopOptions=c.params.loopOptions||{enabled:false,source:{},destination:{},target:{}};let root=c.params.loopOptions,box=document.createElement("div");box.style.cssText="border:1px solid #bdc8d2;background:#f4f7fa;padding:8px;margin:9px 0";let h=document.createElement("label");h.style.cssText="font-size:11px;font-weight:bold";let master=document.createElement("input");master.type="checkbox";master.checked=!!root.enabled;h.append(master," Enable loop options");box.append(h);let count=document.createElement("div");count.style.cssText="font-size:10px;color:#667789;margin:5px 0";box.append(count);let rows=document.createElement("div");box.append(rows);let opts=root[scope]||(root[scope]={});let dims=["column","row","well","labware"];
+ const loopOptions=scope=>{c.params.loopOptions=c.params.loopOptions||{enabled:false,source:{},destination:{},target:{}};let root=c.params.loopOptions,box=document.createElement("div");box.style.cssText="border:1px solid #bdc8d2;background:#f4f7fa;padding:8px;margin:9px 0";let h=document.createElement("label");h.style.cssText="font-size:11px;font-weight:bold";let master=document.createElement("input");master.type="checkbox";master.checked=!!root.enabled;h.append(master," Enable loop options");box.append(h);let count=document.createElement("div");count.style.cssText="font-size:10px;color:#667789;margin:5px 0";box.append(count);let rows=document.createElement("div");box.append(rows);let opts=root[scope]||(root[scope]={});delete opts.labware;let dims=["column","row","well"];
  const paint=()=>{rows.innerHTML="";let n=0;dims.forEach(d=>{let o=opts[d]||(opts[d]={enabled:false,step:1});let line=document.createElement("label");line.style.cssText="display:flex;align-items:center;gap:7px;margin:6px 0;font-size:11px";let cb=document.createElement("input");cb.type="checkbox";cb.checked=!!o.enabled;cb.disabled=!master.checked;let step=document.createElement("input");step.type="number";step.min=1;step.value=o.step||1;step.title="Advance by this many positions per loop cycle";step.style.cssText="width:58px;margin-left:auto";step.disabled=!master.checked||!o.enabled;cb.onchange=()=>{o.enabled=cb.checked;paint()};step.onchange=()=>o.step=Math.max(1,Number(step.value)||1);line.append(cb,document.createTextNode("Vary "+d),step);rows.append(line);if(o.enabled)n++});count.textContent="Loop options selected: "+n+" (protected count)"};
  master.onchange=()=>{root.enabled=master.checked;paint()};paint();f.append(box)};
  if(c.name==="Get DiTi"){let racks=[...new Set(items.filter(x=>["DiTi 1000µL LiHa","DiTi 200µL LiHa"].includes(x.name)).map(x=>x.name))];select("tips","DiTi type available on worktable",racks,c.params.tips)}
@@ -447,6 +447,42 @@ function commandTarget(command){
  return "";
 }
 function commandWells(command){return ["Aspirate","Dispense","Mix"].includes(command.name)?(command.params.wells||[]):[]}
+function applyLoopWellOffsets(command,loopPath){
+ const adjusted={...command,params:{...command.params}},p=adjusted.params;
+ if(!loopPath?.length||!["Aspirate","Dispense","Mix"].includes(command.name))return adjusted;
+ const scope=command.name==="Aspirate"?"source":command.name==="Dispense"?"destination":"target";
+ const root=p.loopOptions||{},options=root[scope]||{};
+ if(!root.enabled||!["column","row","well"].some(d=>options[d]?.enabled))return adjusted;
+ const label=commandTarget(command),item=getLabwareItems().find(x=>x.label===label);
+ if(!item)return adjusted;
+ const layout=wellLayout(item);
+ let rowShift=0,columnShift=0,wellShift=0;
+ for(const loop of loopPath){
+  const cycles=Math.max(0,Number(loop.cycle)-1);
+  if(options.row?.enabled)rowShift+=cycles*Math.max(1,Number(options.row.step)||1);
+  if(options.column?.enabled)columnShift+=cycles*Math.max(1,Number(options.column.step)||1);
+  if(options.well?.enabled)wellShift+=cycles*Math.max(1,Number(options.well.step)||1);
+ }
+ const shifted=(p.wells||[]).map(well=>{
+  let row=0,column=0;
+  if(layout.kind==="plate"){
+   const match=/^([A-Z]+)(\\d+)$/i.exec(String(well));if(!match)return well;
+   row=match[1].toUpperCase().split("").reduce((n,ch)=>n*26+ch.charCodeAt(0)-64,0)-1;
+   column=Number(match[2])-1;
+  }else{
+   const match=/^(\\d+)$/.exec(String(well));if(!match)return well;
+   row=Number(match[1])-1;
+  }
+  row+=rowShift;column+=columnShift;
+  let linear=row*layout.cols+column+wellShift;
+  row=Math.floor(linear/layout.cols);column=linear%layout.cols;
+  if(row<0||row>=layout.rows||column<0||column>=layout.cols)return "OUT OF RANGE";
+  if(layout.kind==="plate")return String.fromCharCode(65+row)+(column+1);
+  return String(row+1);
+ });
+ p.wells=shifted;
+ return adjusted;
+}
 function describeSimulationCommand(command){
  const p=command.params||{},channels=selectedChannels(p);
  if(command.name==="Get DiTi")return "Picking up "+(p.tips||"disposable")+" tips on channels "+channels.join(", ")+".";
@@ -456,10 +492,12 @@ function describeSimulationCommand(command){
  if(command.name==="Mix")return "Mixing "+p.target+" at "+(p.wells||[]).join(", ")+" for "+p.cycles+" cycles.";
  return command.name+" — "+Object.entries(p).filter(([k])=>k!=="loopOptions").map(([k,v])=>k+": "+(Array.isArray(v)?v.join(", "):v)).join("; ");
 }
-async function executeSimulationCommand(command,token){
- const label=commandTarget(command),wells=commandWells(command);
- $("simAction").textContent=describeSimulationCommand(command);
- if(label)await moveSimulationArm(label,wells);
+async function executeSimulationCommand(command,token,loopPath=[]){
+ const activeCommand=applyLoopWellOffsets(command,loopPath);
+ const label=commandTarget(activeCommand),wells=commandWells(activeCommand);
+ $("simAction").textContent=describeSimulationCommand(activeCommand);
+ if(wells.includes("OUT OF RANGE"))$("simAction").textContent+=" Loop advance exceeds the available labware positions.";
+ if(label&&!wells.includes("OUT OF RANGE"))await moveSimulationArm(label,wells);
  if(token!==simulationRunId)return;
  if(command.name==="Get DiTi")selectedChannels(command.params).forEach(ch=>mountedSimulationChannels[ch]=command.params.tips);
  if(command.name==="Drop DiTi")selectedChannels(command.params).forEach(ch=>delete mountedSimulationChannels[ch]);
@@ -583,7 +621,7 @@ async function nextStep(){
  const iteration=step.loopPath.length?" ("+step.loopPath.map(x=>x.name+" "+x.cycle+"/"+x.total).join(" › ")+")":"";
  $("status").textContent="STATUS: RUNNING";$("runFeedback").textContent="Command "+(index+1)+iteration+": "+command.name;
  log("COMMAND "+(index+1)+": "+command.name.toUpperCase()+iteration);
- await executeSimulationCommand(command,token);
+ await executeSimulationCommand(command,token,step.loopPath);
  if(token!==simulationRunId)return;
  runIndex++;
  $("progress").style.width=(runIndex/runSteps.length*100)+"%";$("percent").textContent=Math.round(runIndex/runSteps.length*100)+"%";
