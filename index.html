@@ -255,8 +255,9 @@ function renderProperties(){
  if(c.name==="Mix"){/* mix fields are above */}
  if(c.name==="Set Variable"){
   const mode=select("variableMode","Variable to set",["SAMPLE_CNT","Custom Variable"],c.params.name==="SAMPLE_CNT"?"SAMPLE_CNT":"Custom Variable");
-  const custom=document.createElement("input");custom.type="text";custom.value=c.params.name==="SAMPLE_CNT"?"":(c.params.name||"");field("customName","Custom variable name",custom);
-  const updateCustom=()=>{custom.parentElement.style.display=mode.value==="Custom Variable"?"block":"none"};mode.onchange=updateCustom;updateCustom();
+  const customFields=document.createElement("div");f.append(customFields);
+  const updateCustom=()=>{customFields.innerHTML="";if(mode.value==="Custom Variable"){const label=document.createElement("label");label.textContent="Custom variable name";label.style.cssText="display:block;margin:7px 0;font-size:11px";const custom=document.createElement("input");custom.type="text";custom.value=c.params.name==="SAMPLE_CNT"?"":(c.params.name||"");custom.dataset.key="customName";custom.style.cssText="display:block;width:100%;padding:6px;margin-top:4px";label.append(custom);customFields.append(label)}};
+  mode.onchange=updateCustom;updateCustom();
   input("value","Value or arithmetic expression",c.params.value);
   const ask=document.createElement("input");ask.type="checkbox";ask.checked=!!c.params.askAtRun;field("askAtRun","Ask for this value at run time",ask);
   if(c.params.askAtRun){input("prompt","Run-time prompt",c.params.prompt||"Enter a value");input("min","Minimum value",c.params.min??1);input("max","Maximum value",c.params.max??16)}
