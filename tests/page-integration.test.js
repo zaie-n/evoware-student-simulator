@@ -55,11 +55,12 @@ const offsetStart = html.indexOf("function applyLoopWellOffsets(command,loopPath
 const offsetEnd = html.indexOf("\nfunction describeSimulationCommand", offsetStart);
 assert.ok(offsetStart >= 0 && offsetEnd > offsetStart, "Loop well offset helper must be present");
 const offsetSource = html.slice(offsetStart, offsetEnd);
-const applyOffsets = new Function("command","loopPath","getLabwareItems","wellLayout","commandTarget", offsetSource + "\nreturn applyLoopWellOffsets;")();
+const makeOffsetHelper = new Function("command","loopPath","getLabwareItems","wellLayout","commandTarget", offsetSource + "\nreturn applyLoopWellOffsets;");
 const plate = {label:"Plate A",name:"96 Well Microplate"};
 const getPlate = () => [plate];
 const plateLayout = () => ({rows:8,cols:12,kind:"plate"});
 const targetLabel = command => command.params.source || command.params.destination || command.params.target;
+const applyOffsets = makeOffsetHelper(null,null,getPlate,plateLayout,targetLabel);
 const makeCommand = (name, scope, wells, options) => ({name,params:{[scope]:"Plate A",wells,loopOptions:{enabled:true,[scope]:options}}});
 const advance = applyOffsets(makeCommand("Aspirate","source",["B3","E3"],{row:{enabled:true,step:1}}),[{name:"Outer",cycle:2,total:3}],getPlate,plateLayout,targetLabel);
 assert.deepEqual(advance.params.wells,["C3","F3"], "Row advancement must preserve columns and multi-channel spacing");
