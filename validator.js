@@ -283,8 +283,8 @@
           if (layout.kind === "tubes" && item.isTubeRack) {
             const emptyPositions = wells.filter(well => !item.rackItems[Number(well) - 1]);
             if (emptyPositions.length) add("error", n, "Carrier position" + (emptyPositions.length === 1 ? " " : "s ") + emptyPositions.join(", ") + " on " + item.label + " are empty. Select only occupied tube positions.");
-            const sequential = wells.every((well, position) => Number(well) === Number(wells[0]) + position);
-            if (wells.length && !sequential) add("error", n, "Tube carrier positions must be consecutive and in carrier order. Each mounted channel maps to the next tube position.");
+            const topSequence = wells.every((well, position) => Number(well) === position + 1);
+            if (wells.length && !topSequence) add("error", n, "Mounted channels map to the top tube carrier positions starting at position 1. Select the first " + channels.length + " occupied positions in carrier order.");
           }
           if (wells.length !== channels.length) {
             add("error", n, "Select exactly " + channels.length + " labware position" + (channels.length === 1 ? "" : "s") + " for the selected channels.");
