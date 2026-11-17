@@ -138,7 +138,7 @@
         const isVariable = /^[A-Za-z_][A-Za-z0-9_]*$/.test(cycleValue);
         if ((!Number.isInteger(cycles) || cycles < 1) && !isVariable) {
           add("error", n, "Loop cycles must be a positive whole number or the name of a defined numeric variable.");
-        } else if (isVariable && !definedVariables.has(cycleValue)) {
+        } else if (isVariable && !definedVariables.has(cycleValue.toUpperCase())) {
           add("error", n, "Loop variable " + cycleValue + " has not been assigned a numeric value before this loop.");
         }
       }
@@ -376,13 +376,13 @@
         }
         if (variableValue === "" || (!Number.isFinite(Number(variableValue)) && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(variableValue))) {
           add("error", n, "Enter a numeric value or the name of an existing numeric variable.");
-        } else if (!Number.isFinite(Number(variableValue)) && !definedVariables.has(variableValue)) {
+        } else if (!Number.isFinite(Number(variableValue)) && !definedVariables.has(variableValue.toUpperCase())) {
           add("error", n, "Variable " + variableValue + " has not been assigned a numeric value before this command.");
         } else if (variableName === variableValue) {
           add("error", n, "A variable cannot be assigned from itself before it has a value.");
         } else {
-          const resolvedValue = Number.isFinite(Number(variableValue)) ? Number(variableValue) : definedVariables.get(variableValue);
-          definedVariables.set(variableName, resolvedValue);
+          const resolvedValue = Number.isFinite(Number(variableValue)) ? Number(variableValue) : definedVariables.get(variableValue.toUpperCase());
+          definedVariables.set(variableName.toUpperCase(), resolvedValue);
         }
       }
       if (c.name === "If – Then" && !String(p.condition || "").trim()) {
