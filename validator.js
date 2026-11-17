@@ -360,7 +360,7 @@
           add("error", n, "Timer length must be zero or a positive number of seconds.");
         }
       }
-      if (c.name === "Wait for Timer" && !String(p.timer || "").trim()) {
+      if (c.name === "Wait for Timer" && !String(p.timerName || "").trim()) {
         add("error", n, "Specify the timer this command should wait for.");
       }
       if (c.name === "Set Variable") {
