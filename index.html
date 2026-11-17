@@ -658,6 +658,7 @@ function buildExecutionPlan(){
   else if(command.name==="End Loop"&&stack.length)endForBegin.set(stack.pop(),index);
  });
  const plan=[],variables={};
+ const selectedChannels=params=>(params.channels||[]).map(Number).sort((a,b)=>a-b);
  const resolveValue=value=>{
   const raw=String(value??"").trim();
   if(raw!==""&&Number.isFinite(Number(raw)))return Number(raw);
