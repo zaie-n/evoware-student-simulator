@@ -521,8 +521,8 @@ async function executeSimulationCommand(command,token,loopPath=[],sampleChannels
  if(wells.includes("OUT OF RANGE"))$("simAction").textContent+=" Loop advance exceeds the available labware positions.";
  if(label&&!wells.includes("OUT OF RANGE"))await moveSimulationArm(label,wells);
  if(token!==simulationRunId)return;
- if(command.name==="Get DiTi")selectedChannels(command.params).forEach(ch=>mountedSimulationChannels[ch]=command.params.tips);
- if(command.name==="Drop DiTi")selectedChannels(command.params).forEach(ch=>delete mountedSimulationChannels[ch]);
+ if(activeCommand.name==="Get DiTi")selectedChannels(activeCommand.params).forEach(ch=>mountedSimulationChannels[ch]=activeCommand.params.tips);
+ if(activeCommand.name==="Drop DiTi")selectedChannels(activeCommand.params).forEach(ch=>delete mountedSimulationChannels[ch]);
  if(command.name==="Start Timer"){const timerName=String(command.params.timerName||"").trim();simulationTimers[timerName]={startedAt:Date.now(),durationMs:Math.max(0,Number(command.params.seconds)||0)*1000};log("TIMER STARTED: "+timerName+" ("+command.params.seconds+" seconds)")}
  if(command.name==="Wait for Timer")await waitForNamedTimer(String(command.params.timerName||"").trim(),token);
  if(token!==simulationRunId)return;
