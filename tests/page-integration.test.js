@@ -29,6 +29,25 @@ assert.ok(html.includes("function moveSimulationArm(label,wells=[])"), "Live wor
 assert.ok(html.includes('setAttribute("class","simulation-arm-layer")'), "Worktable must include an animated LiHa arm overlay");
 assert.ok(html.includes("simulationPlaying=true"), "Run simulation must execute the method continuously");
 assert.ok(html.includes("function buildExecutionPlan()"), "Simulation must expand loop bodies into repeated execution steps");
+const planStart = html.indexOf("function buildExecutionPlan(){");
+const planEnd = html.indexOf("\nfunction prepareRun()", planStart);
+assert.ok(planStart >= 0 && planEnd > planStart, "Variable-aware execution planner must be present");
+const planSource = html.slice(planStart, planEnd);
+const makePlan = new Function("method", planSource + "\nreturn buildExecutionPlan();");
+const variablePlan = makePlan([
+  {name:"Set Variable",params:{name:"Num_Samples",value:12}},
+  {name:"Set Variable",params:{name:"SAMPLE_CNT",value:"Num_Samples"}},
+  {name:"Begin Loop",params:{loopName:"Bead addition",cycles:"SAMPLE_CNT"}},
+  {name:"User Prompt",params:{message:"Sample operation"}},
+  {name:"End Loop",params:{loopName:"Bead addition"}},
+  {name:"Set Variable",params:{name:"SAMPLE_CNT",value:3}},
+  {name:"Begin Loop",params:{loopName:"Elution",cycles:"SAMPLE_CNT"}},
+  {name:"User Prompt",params:{message:"Elution operation"}},
+  {name:"End Loop",params:{loopName:"Elution"}}
+]);
+assert.equal(variablePlan.filter(step => step.commandIndex === 3).length, 12, "SAMPLE_CNT must expand the first loop to the user's numeric sample count");
+assert.equal(variablePlan.filter(step => step.commandIndex === 7).length, 3, "Resetting SAMPLE_CNT must change the next loop's iteration count");
+
 assert.ok(html.includes('input("value","Numeric value or existing variable name"'), "Set Variable must accept a custom numeric value or a variable reference");
 assert.ok(html.includes('input("cycles","Loop cycles or variable name"'), "Begin Loop must accept a variable name such as SAMPLE_CNT");
 assert.ok(html.includes('const resolved=resolveValue(params.cycles)'), "Execution planning must resolve variable-driven loop counts");
