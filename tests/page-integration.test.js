@@ -118,7 +118,7 @@ assert.ok(html.includes("activeChannels.map(ch=>ch-1)"), "Well selection must re
 assert.ok(html.includes('let dims=["column","row","well"]'), "Loop options must include only column, row, and well advancement");
 assert.ok(!html.includes('"labware"') || !html.includes('let dims=["column","row","well","labware"]'), "Labware advancement must be removed from loop options");
 assert.ok(html.includes("function applyLoopWellOffsets(command,loopPath)"), "Simulation must calculate well offsets from active loop iterations");
-assert.ok(html.includes("executeSimulationCommand(command,token,step.loopPath)"), "Each executed command must receive its active nested loop path");
+assert.ok(html.includes("executeSimulationCommand(command,token,step.loopPath,step.sampleChannels)"), "Each executed command must receive its active nested loop path");
 const offsetStart = html.indexOf("function applyLoopWellOffsets(command,loopPath){");
 const offsetEnd = html.indexOf("\nfunction describeSimulationCommand", offsetStart);
 assert.ok(offsetStart >= 0 && offsetEnd > offsetStart, "Loop well offset helper must be present");
