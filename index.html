@@ -193,7 +193,6 @@ function renderProperties(){
  if(c.name==="Set Variable"){input("name","Variable name",c.params.name);input("value","Value",c.params.value,"number")}
  if(c.name==="If – Then")input("condition","Condition",c.params.condition);
  if(c.name==="User Prompt")input("message","Prompt message",c.params.message);
- if(c.name==="Wait for Timer")input("timer","Timer name",c.params.timer);
  $("applyParams").onclick=()=>{f.querySelectorAll("input,select").forEach(x=>{let k=x.dataset.key;if(!k)return;let v=x.value;c.params[k]=["volume","cycles","seconds","value"].includes(k)&&v!==""?Number(v):v});if(["Aspirate","Dispense","Mix","Get DiTi","Drop DiTi"].includes(c.name))c.params.channels=[...area.querySelectorAll(".channelcheck:checked")].map(x=>Number(x.value));validated=false;renderMethod()}
 }
 function cancelLabwarePlacement(message=null){
