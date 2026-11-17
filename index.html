@@ -12,7 +12,7 @@ header{background:#dce3ea;border-bottom:1px solid #9eabb8;padding:8px 14px;displ
 .toolbar{display:flex;gap:5px;flex-wrap:wrap}.toolbar button,.btn{border:1px solid #aab6c2;background:#f7f8fa;color:#27394a;padding:7px 10px;border-radius:3px;cursor:pointer;font-size:12px}
 button:hover{filter:brightness(.97)}button.primary{background:var(--accent);color:white;border-color:#1c6198}
 main{padding:10px;max-width:1600px;margin:auto}
-.topgrid{display:grid;grid-template-columns:260px minmax(420px,1fr);gap:9px;align-items:start}
+.topgrid{display:grid;grid-template-columns:260px minmax(0,1fr);gap:9px;align-items:start}.workspace-column{display:flex;flex-direction:column;gap:9px;min-width:0}
 .panel{background:#f8f9fb;border:1px solid #aeb9c4;border-radius:3px;min-width:0;overflow:hidden}
 .phead{background:#dce5ed;color:#293d50;font-weight:700;padding:8px 10px;border-bottom:1px solid #b4c0cb;display:flex;justify-content:space-between;gap:8px}
 .library{padding:8px;background:#e9edf2;max-height:650px;overflow:auto}
@@ -28,14 +28,14 @@ main{padding:10px;max-width:1600px;margin:auto}
 .command{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #c6ced6;padding:7px;margin-bottom:3px;cursor:pointer;font-size:11px}
 .command.selected{border:2px solid #4386bf;background:#e8f2fb}.command.drop-before{border-top:4px solid #0879c9;box-shadow:0 -2px 0 #0879c9}.command.drop-after{border-bottom:4px solid #0879c9;box-shadow:0 2px 0 #0879c9}.well-grid button:disabled{opacity:1;filter:none;cursor:not-allowed}.command .n{width:20px;color:#78899a}.command .detail{flex:1}.command small{display:block;color:#718193;margin-top:2px}.command button{border:0;background:transparent;color:#a4544b;cursor:pointer}
 .empty{text-align:center;padding:45px 10px;color:#718193}
-.props{padding:10px;min-height:0;max-height:none;overflow:visible;background:#fff;transition:all .18s ease}.props.compact{padding:7px 10px;min-height:38px;max-height:42px;overflow:hidden}.props.compact #paramFields,.props.compact #visualPicker,.props.compact #channelError,.props.compact #applyParams{display:none!important}.props.compact>div{margin:0!important}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.fields label{font-size:11px;color:#526476}.fields input,.fields select{display:block;width:100%;margin-top:4px;padding:7px;border:1px solid #b8c3ce;background:white;border-radius:3px}
+.infopad-panel.collapsed #properties{display:none}.infopad-panel .phead{align-items:center}.infopad-panel .phead .btn{margin-left:auto;padding:4px 8px}.props{padding:10px;min-height:0;max-height:none;overflow:visible;background:#fff;transition:all .18s ease}.props.compact{padding:7px 10px;min-height:38px;max-height:42px;overflow:hidden}.props.compact #paramFields,.props.compact #visualPicker,.props.compact #channelError,.props.compact #applyParams{display:none!important}.props.compact>div{margin:0!important}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.fields label{font-size:11px;color:#526476}.fields input,.fields select{display:block;width:100%;margin-top:4px;padding:7px;border:1px solid #b8c3ce;background:white;border-radius:3px}
 .workpanel{margin-top:9px}.workbody{padding:7px;background:#e8edf2}
-.deckscroll{overflow-x:auto;padding-bottom:7px}
-.deck{display:grid;grid-template-columns:repeat(10,minmax(125px,1fr));gap:7px;min-width:1320px;padding:9px;background:#d6dfe7;border:2px solid #9eafbd;position:relative}.simulation-arm-layer{position:absolute;inset:0;width:100%;height:100%;z-index:8;pointer-events:none;overflow:visible}.simulation-arm-carriage{transition:transform .7s cubic-bezier(.2,.7,.2,1);transform-box:view-box;transform-origin:0 0}.simulation-arm-tip{transition:transform .45s ease;transform-box:view-box;transform-origin:0 0}.labware.mixing{animation:simulationMix .18s ease-in-out 4 alternate}@keyframes simulationMix{from{transform:translateY(-2px)}to{transform:translateY(2px)}}.simulation-target{outline:3px solid #168b69!important;outline-offset:2px;box-shadow:0 0 0 3px #b7e6d4!important;position:relative;z-index:2}.mini-wells{display:grid;gap:2px;justify-content:center;align-content:center;margin:4px auto 1px;max-width:100%;pointer-events:none}.mini-well{width:4px;height:4px;border-radius:50%;background:#4c6980;display:block}.mini-well.active{background:#e35d35;box-shadow:0 0 0 2px #ffe0a8}.labware-label{display:block;overflow-wrap:anywhere}.command.simulation-current{outline:2px solid #168b69;background:#e5f5ee}.sim-status{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;margin:0 0 8px;background:#edf3f7;border:1px solid #c4d0da;font-size:11px}.sim-status strong{color:#216c56}.sim-controls{display:flex;gap:6px;flex-wrap:wrap}
-.site{background:#eef2f5;border:2px solid #929faa;min-height:170px;padding:6px;position:relative}
+.deckscroll{overflow-x:hidden;padding-bottom:7px}
+.deck{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;min-width:0;width:100%;padding:7px;background:#d6dfe7;border:2px solid #9eafbd;position:relative}.simulation-arm-layer{position:absolute;inset:0;width:100%;height:100%;z-index:8;pointer-events:none;overflow:visible}.simulation-arm-carriage{transition:transform .7s cubic-bezier(.2,.7,.2,1);transform-box:view-box;transform-origin:0 0}.simulation-arm-tip{transition:transform .45s ease;transform-box:view-box;transform-origin:0 0}.labware.mixing{animation:simulationMix .18s ease-in-out 4 alternate}@keyframes simulationMix{from{transform:translateY(-2px)}to{transform:translateY(2px)}}.simulation-target{outline:3px solid #168b69!important;outline-offset:2px;box-shadow:0 0 0 3px #b7e6d4!important;position:relative;z-index:2}.mini-wells{display:grid;gap:2px;justify-content:center;align-content:center;margin:4px auto 1px;max-width:100%;pointer-events:none}.mini-well{width:4px;height:4px;border-radius:50%;background:#4c6980;display:block}.mini-well.active{background:#e35d35;box-shadow:0 0 0 2px #ffe0a8}.labware-label{display:block;overflow-wrap:anywhere}.command.simulation-current{outline:2px solid #168b69;background:#e5f5ee}.sim-status{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;margin:0 0 8px;background:#edf3f7;border:1px solid #c4d0da;font-size:11px}.sim-status strong{color:#216c56}.sim-controls{display:flex;gap:6px;flex-wrap:wrap}
+.site{min-width:0;background:#eef2f5;border:2px solid #929faa;min-height:170px;padding:6px;position:relative}
 .sitehead{font-size:11px;font-weight:700;color:#42566a;border-bottom:1px solid #c1cbd4;padding-bottom:5px;margin-bottom:6px}
 .carrier{border:2px solid #8e9ba7;background:#d4d9de;min-height:125px;padding:5px;display:flex;flex-direction:column;gap:4px}
-.carriername{text-align:center;font-size:10px;font-weight:700;color:#3d4b58;cursor:grab;user-select:none}.carriername:active{cursor:grabbing}
+.carriername{text-align:center;font-size:10px;font-weight:700;color:#3d4b58;cursor:grab;user-select:none;overflow-wrap:anywhere}.carriername:active{cursor:grabbing}
 .carrier.selected-carrier{outline:3px solid #d8ad18;outline-offset:3px;box-shadow:0 0 0 2px #f6e8a8}
 .labware.selected-labware{outline:3px solid #d8ad18;outline-offset:2px;box-shadow:0 0 0 2px #f6e8a8;position:relative;z-index:1}
 .labware{background:#6ca8d6;border:1px solid #477da8;color:#102f48;padding:5px 3px;text-align:center;font-size:9px;min-height:25px;cursor:grab}
@@ -61,7 +61,7 @@ main{padding:10px;max-width:1600px;margin:auto}
 .modal{background:#f8f9fb;border:1px solid #9eabb8;max-width:540px;width:100%;padding:15px;border-radius:5px;box-shadow:0 8px 30px #0003}
 .modal h3{margin:0 0 8px}.modal p{font-size:12px;color:#536577;line-height:1.5}
 .modal .actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}
-@media(max-width:850px){.topgrid{grid-template-columns:1fr}.library{max-height:300px}.lower{grid-template-columns:1fr}}
+@media(max-width:850px){.topgrid{grid-template-columns:1fr}.library{max-height:300px}.lower{grid-template-columns:1fr}.deckscroll{overflow-x:auto}.deck{min-width:760px}}
 </style>
 </head>
 <body>
@@ -76,26 +76,28 @@ main{padding:10px;max-width:1600px;margin:auto}
    <button class="active" data-tab="Commands">Commands</button><button data-tab="Liquid Classes">Liquid Classes</button><button data-tab="Carriers">Carriers</button><button data-tab="Labware">Labware</button>
   </div>
   <div class="library" id="library"></div>
-  <div class="hint">Drag commands into the Script Editor. For the worktable, first drag a carrier onto one of the 10 deck positions, then drag labware onto that carrier.</div>
  </section>
- <section class="panel">
-  <div class="phead">Script Editor <span id="commandCount" style="font-weight:400">0 commands</span></div>
-  <div class="script" id="script">
-   <div class="empty">Drag commands here to build your method.<br><br>Commands can be selected to edit their properties and dragged to reorder.</div>
-  </div>
-  <div class="hint">Select a command to display its parameters in the INFOPAD below. Commands are educational representations of liquid-handling operations, not executable instrument code.</div>
-  <div class="phead">INFOPAD — Command Properties</div>
-  <div class="props" id="properties"><span style="color:#718193;font-size:11px">Select a command to inspect and edit its parameters.</span></div>
- </section>
-</div>
-<section class="panel workpanel">
- <div class="phead">Worktable Editor</div>
- <div class="workbody">
-  <p class="decknote"><b>Worktable setup:</b> Each numbered grey outline represents a carrier position. Drag a labware item to another compatible site to move it; dropping on an occupied compatible site swaps the items. Drag a carrier by its header to move it; dropping on an occupied deck position swaps carriers while keeping all their labware together.</p>
-  <div class="sim-status"><span><strong>LIVE SIMULATION</strong> <span id="simAction">Ready. Run a validated method to animate the LiHa.</span></span><span id="simTipState">Tips: none mounted</span></div><div class="deckscroll"><div class="deck" id="deck"></div></div>
-  <div id="deckInfo" class="hint">No worktable item selected.</div>
+ <div class="workspace-column">
+  <section class="panel">
+   <div class="phead">Script Editor <span id="commandCount" style="font-weight:400">0 commands</span></div>
+   <div class="script" id="script">
+    <div class="empty">Drag commands here to build your method.<br><br>Commands can be selected to edit their properties and dragged to reorder.</div>
+   </div>
+   <div class="infopad-panel" id="infopadPanel">
+    <div class="phead">INFOPAD — Command Properties <button class="btn" id="toggleInfopad" type="button" aria-expanded="true">Collapse</button></div>
+    <div class="props" id="properties"><span style="color:#718193;font-size:11px">Select a command to inspect and edit its parameters.</span></div>
+   </div>
+  </section>
+  <section class="panel workpanel">
+   <div class="phead">Worktable Editor</div>
+   <div class="workbody">
+    <p class="decknote"><b>Worktable setup:</b> Eight numbered grey outlines represent carrier positions. Drag labware to another compatible site to move it; dropping on an occupied compatible site swaps items. Drag a carrier by its header to move it; dropping on an occupied deck position swaps carriers with all their labware.</p>
+    <div class="sim-status"><span><strong>LIVE SIMULATION</strong> <span id="simAction">Ready. Run a validated method to animate the LiHa.</span></span><span id="simTipState">Tips: none mounted</span></div><div class="deckscroll"><div class="deck" id="deck"></div></div>
+    <div id="deckInfo" class="hint">No worktable item selected.</div>
+   </div>
+  </section>
  </div>
-</section>
+</div>
 <section class="panel simulation-controls-panel">
  <div class="phead">Simulation Controls</div>
  <div class="monitor">
@@ -136,8 +138,8 @@ const carrierTypes={
 };
 const colors={"96 Well Microplate":"blue","96 Well Microplate - MagPlat":"blue","DiTi 1000µL LiHa":"yellow","DiTi 200µL LiHa":"yellow","DiTi Waste":"green","Trough 100ml":"green","1.5mL tube":"purple","0.2mL tube":"purple"};
 const icons={"Aspirate":"↑","Dispense":"↓","Mix":"↻","Get DiTi":"▤","Drop DiTi":"▧","Begin Loop":"↻","End Loop":"↘","Set Variable":"ƒ","If – Then":"◇","User Prompt":"▣","Start Timer":"◷","Wait for Timer":"◴"};
-const defaults={"Get DiTi":{tips:"DiTi 200µL LiHa",channels:[1,2,3,4,5,6,7,8]},"Drop DiTi":{channels:[1,2,3,4,5,6,7,8],waste:""},"Aspirate":{source:"",volume:23,liquidClass:"Water",channels:[1,2,3,4,5,6,7,8],wells:[]},"Dispense":{destination:"",volume:23,liquidClass:"Water",channels:[1,2,3,4,5,6,7,8],wells:[]},"Mix":{volume:100,cycles:3},"Begin Loop":{loopName:"",cycles:8},"End Loop":{loopName:""},"Set Variable":{name:"sample_count",value:16},"If – Then":{condition:"sample_count > 0"},"User Prompt":{message:"Check reagent reservoirs"},"Start Timer":{seconds:30},"Wait for Timer":{timer:"mix_timer"}};
-let method=[],selected=-1,deck=Array.from({length:10},()=>null),selectedDeck=null,validated=false,runIndex=0,runSteps=[],dragItem=null,dragMove=null,dragCommandId=null,dropIndex=null,dropAfter=false;let simulationPlaying=false,simulationBusy=false,simulationRunId=0,simulationTimer=null,mountedSimulationChannels={};
+const defaults={"Get DiTi":{tips:"DiTi 200µL LiHa",channels:[1,2,3,4,5,6,7,8]},"Drop DiTi":{channels:[1,2,3,4,5,6,7,8],waste:""},"Aspirate":{source:"",volume:23,liquidClass:"Water",channels:[1,2,3,4,5,6,7,8],wells:[]},"Dispense":{destination:"",volume:23,liquidClass:"Water",channels:[1,2,3,4,5,6,7,8],wells:[]},"Mix":{volume:100,cycles:3},"Begin Loop":{loopName:"",cycles:8},"End Loop":{loopName:""},"Set Variable":{name:"sample_count",value:16},"If – Then":{condition:"sample_count > 0"},"User Prompt":{message:"Check reagent reservoirs"},"Start Timer":{timerName:"mix_timer",seconds:30},"Wait for Timer":{timerName:"mix_timer"}};
+let method=[],selected=-1,deck=Array.from({length:8},()=>null),selectedDeck=null,validated=false,runIndex=0,runSteps=[],dragItem=null,dragMove=null,dragCommandId=null,dropIndex=null,dropAfter=false;let simulationPlaying=false,simulationBusy=false,simulationRunId=0,simulationTimer=null,mountedSimulationChannels={},simulationTimers={};
 function log(s){$("log").innerHTML+=`<br>${new Date().toLocaleTimeString()} ${s}`;$("log").scrollTop=$("log").scrollHeight}
 function getLabwareItems(){return deck.flatMap((c,pos)=>c?c.items.map((x,site)=>x?{...x,pos,site,carrier:c.name}:null).filter(Boolean):[])}
 function getLabwareLabels(){return getLabwareItems().map(x=>x.label)}
@@ -176,7 +178,8 @@ function renderProperties(){
  if(["Get DiTi","Drop DiTi"].includes(c.name)){addChannelPicker(area,c.params)}
  if(c.name==="Begin Loop"){input("loopName","Loop name",c.params.loopName||"");input("cycles","Loop cycles",c.params.cycles||1,"number",1)}
  if(c.name==="End Loop")input("loopName","Loop name",c.params.loopName||"");
- if(c.name==="Start Timer")input("seconds","Timer length (seconds)",c.params.seconds||0,"number",0);
+ if(c.name==="Start Timer"){input("timerName","Timer name",c.params.timerName||"mix_timer");input("seconds","Timer length (seconds)",c.params.seconds??30,"number",0)}
+ if(c.name==="Wait for Timer")input("timerName","Timer name to wait for",c.params.timerName||"mix_timer");
  if(c.name==="Aspirate"||c.name==="Dispense"||c.name==="Mix"){
   let key=c.name==="Aspirate"?"source":c.name==="Dispense"?"destination":"target",lab=labware(key,c.name==="Aspirate"?"Source labware":c.name==="Dispense"?"Destination labware":"Labware to mix",c.params[key]);
   if(c.name!=="Mix"){input("volume","Volume (µL)",c.params.volume,"number",0);select("liquidClass","Liquid class",["Water","Glycerol","Ethanol"],c.params.liquidClass)}else{input("volume","Volume (µL)",c.params.volume,"number",0);input("cycles","Mix cycles",c.params.cycles||3,"number",1)}
@@ -493,6 +496,15 @@ function describeSimulationCommand(command){
  if(command.name==="Mix")return "Mixing "+p.target+" at "+(p.wells||[]).join(", ")+" for "+p.cycles+" cycles.";
  return command.name+" — "+Object.entries(p).filter(([k])=>k!=="loopOptions").map(([k,v])=>k+": "+(Array.isArray(v)?v.join(", "):v)).join("; ");
 }
+async function waitForNamedTimer(timerName,token){
+ const timer=simulationTimers[timerName];
+ if(!timer){log("WAIT FOR TIMER: no Start Timer named "+timerName+" has run; continuing without a delay.");return}
+ const remaining=Math.max(0,timer.startedAt+timer.durationMs-Date.now());
+ $("simAction").textContent="Waiting for timer "+timerName+" ("+(remaining/1000).toFixed(1)+" seconds remaining).";
+ if(remaining>0)await new Promise(resolve=>setTimeout(resolve,remaining));
+ if(token!==simulationRunId)return;
+ log("TIMER COMPLETE: "+timerName);
+}
 async function executeSimulationCommand(command,token,loopPath=[]){
  const activeCommand=applyLoopWellOffsets(command,loopPath);
  const label=commandTarget(activeCommand),wells=commandWells(activeCommand);
@@ -502,6 +514,9 @@ async function executeSimulationCommand(command,token,loopPath=[]){
  if(token!==simulationRunId)return;
  if(command.name==="Get DiTi")selectedChannels(command.params).forEach(ch=>mountedSimulationChannels[ch]=command.params.tips);
  if(command.name==="Drop DiTi")selectedChannels(command.params).forEach(ch=>delete mountedSimulationChannels[ch]);
+ if(command.name==="Start Timer"){const timerName=String(command.params.timerName||"").trim();simulationTimers[timerName]={startedAt:Date.now(),durationMs:Math.max(0,Number(command.params.seconds)||0)*1000};log("TIMER STARTED: "+timerName+" ("+command.params.seconds+" seconds)")}
+ if(command.name==="Wait for Timer")await waitForNamedTimer(String(command.params.timerName||"").trim(),token);
+ if(token!==simulationRunId)return;
  updateSimulationArmTips();
  if(command.name==="Mix"){
   const target=[...$("deck").querySelectorAll(".simulation-target")][0];
@@ -604,7 +619,7 @@ function buildExecutionPlan(){
  return plan;
 }
 function prepareRun(){
- simulationRunId++;simulationPlaying=false;simulationBusy=false;clearTimeout(simulationTimer);runIndex=0;runSteps=buildExecutionPlan();mountedSimulationChannels={};updateSimulationArmTips();clearSimulationHighlight();
+ simulationRunId++;simulationPlaying=false;simulationBusy=false;clearTimeout(simulationTimer);runIndex=0;runSteps=buildExecutionPlan();simulationTimers={};mountedSimulationChannels={};updateSimulationArmTips();clearSimulationHighlight();
  $("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent="STATUS: READY TO RUN";$("runFeedback").textContent="Simulation ready. "+runSteps.length+" execution steps, including loop iterations.";
  $("stepRun").disabled=!runSteps.length;$("pauseRun").hidden=true;$("run").textContent="▶ Run simulation";
 }
@@ -650,7 +665,8 @@ $("tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("tabs").querySe
 $("script").addEventListener("dragover",e=>{if(!dragCommandId)e.preventDefault()});$("script").addEventListener("drop",e=>{if(dragCommandId)return;e.preventDefault();if(dragItem?.kind==="command"){addCommand(dragItem.name);dragItem=null}});
 $("validate").onclick=validate;$("run").onclick=startOrResumeSimulation;$("pauseRun").onclick=pauseSimulation;
 $("stepRun").onclick=()=>{if(runIndex===0||runIndex>=runSteps.length)prepareRun();simulationPlaying=false;$("pauseRun").hidden=true;$("run").disabled=false;$("run").textContent="▶ Run simulation";nextStep()};
-$("resetRun").onclick=()=>{simulationRunId++;simulationPlaying=false;simulationBusy=false;clearTimeout(simulationTimer);$("validationPanel").classList.remove("visible");runIndex=0;runSteps=[];mountedSimulationChannels={};updateSimulationArmTips();clearSimulationHighlight();$("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent=validated?"STATUS: READY":"STATUS: NOT VALIDATED";$("stepRun").disabled=!validated;$("pauseRun").hidden=true;$("run").disabled=!validated;$("run").textContent="▶ Run simulation";$("simAction").textContent="Simulation reset. Ready to run again.";$("log").innerHTML="SIMULATION RESET"};
+$("resetRun").onclick=()=>{simulationRunId++;simulationPlaying=false;simulationBusy=false;clearTimeout(simulationTimer);$("validationPanel").classList.remove("visible");runIndex=0;runSteps=[];simulationTimers={};mountedSimulationChannels={};updateSimulationArmTips();clearSimulationHighlight();$("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent=validated?"STATUS: READY":"STATUS: NOT VALIDATED";$("stepRun").disabled=!validated;$("pauseRun").hidden=true;$("run").disabled=!validated;$("run").textContent="▶ Run simulation";$("simAction").textContent="Simulation reset. Ready to run again.";$("log").innerHTML="SIMULATION RESET"};
+$("toggleInfopad").onclick=()=>{const panel=$("infopadPanel"),collapsed=panel.classList.toggle("collapsed");$("toggleInfopad").textContent=collapsed?"Expand":"Collapse";$("toggleInfopad").setAttribute("aria-expanded",String(!collapsed))};
 renderLibrary("Commands");renderMethod();renderDeck();$("run").disabled=true;$("stepRun").disabled=true;
 })();
 </script>
