@@ -432,6 +432,72 @@ test("Set Variable accepts a numeric custom value", () => {
   assert.equal(errors(findings).length, 0, JSON.stringify(errors(findings), null, 2));
 });
 
+
+test("arithmetic expressions can use previously assigned variables in pipetting volumes", () => {
+  const findings = findingsFor([
+    { name: "Set Variable", params: { name: "SAMPLE_CNT", value: 4 } },
+    { name: "Get DiTi", params: { tips: "DiTi 200µL LiHa", channels: [1] } },
+    aspirate({ channels: [1], wells: ["A1"], volume: "SAMPLE_CNT*4" }),
+    dispense({ channels: [1], wells: ["A1"], volume: "(SAMPLE_CNT+4)*2" }),
+    dropTips({ channels: [1] })
+  ], deckWithSupplies());
+  assert.equal(errors(findings).length, 0, JSON.stringify(errors(findings), null, 2));
+});
+
+test("arithmetic expressions can be used for loop cycles and custom variable assignments", () => {
+  const findings = findingsFor([
+    { name: "Set Variable", params: { name: "Samples", value: 4 } },
+    { name: "Set Variable", params: { name: "Double_Samples", value: "Samples*2" } },
+    { name: "Begin Loop", params: { loopName: "Arithmetic loop", cycles: "Double_Samples/2" } },
+    { name: "User Prompt", params: { message: "Loop body" } },
+    { name: "End Loop", params: { loopName: "Arithmetic loop" } }
+  ]);
+  assert.equal(errors(findings).length, 0, JSON.stringify(errors(findings), null, 2));
+});
+
+test("a 16-position tube carrier assigns one tube position to each selected channel", () => {
+  const deck = [
+    { name: "Tube 13mm 16 Pos", items: [{ name: "1.5mL tube", label: "Elution Tubes" }, ...Array(15).fill(null)] },
+    { name: "DiTi 2Pos + Waste", items: [{ name: "DiTi 200µL LiHa", label: "200uL Tips" }, null, { name: "DiTi Waste", label: "Tip Waste" }] }
+  ];
+  const findings = findingsFor([
+    { name: "Get DiTi", params: { tips: "DiTi 200µL LiHa", channels: [1, 2, 3] } },
+    aspirate({ source: "Elution Tubes", channels: [1, 2, 3], wells: ["1", "2", "3"] }),
+    dropTips({ channels: [1, 2, 3] })
+  ], deck);
+  assert.equal(errors(findings).length, 0, JSON.stringify(errors(findings), null, 2));
+});
+
+test("tube positions must preserve one-tube-per-channel spacing", () => {
+  const deck = [
+    { name: "Tube 13mm 16 Pos", items: [{ name: "0.2mL tube", label: "PCR Tubes" }, ...Array(15).fill(null)] },
+    { name: "DiTi 2Pos + Waste", items: [{ name: "DiTi 200µL LiHa", label: "200uL Tips" }, null, { name: "DiTi Waste", label: "Tip Waste" }] }
+  ];
+  const findings = findingsFor([
+    { name: "Get DiTi", params: { tips: "DiTi 200µL LiHa", channels: [1, 2] } },
+    aspirate({ source: "PCR Tubes", channels: [1, 2], wells: ["1", "3"] })
+  ], deck);
+  assert.equal(hasErrorAt(findings, 2), true);
+  assert.equal(hasMessage(findings, "physical spacing of the selected LiHa channels"), true);
+});
+
+test("a single tube outside a 16-position rack cannot serve multiple channels", () => {
+  const types = {
+    ...carrierTypes,
+    "Single tube holder": { sites: 1, compatible: ["1.5mL tube"] }
+  };
+  const deck = [
+    { name: "Single tube holder", items: [{ name: "1.5mL tube", label: "Single Tube" }] },
+    { name: "DiTi 2Pos + Waste", items: [{ name: "DiTi 200µL LiHa", label: "200uL Tips" }, null, { name: "DiTi Waste", label: "Tip Waste" }] }
+  ];
+  const findings = findingsFor([
+    { name: "Get DiTi", params: { tips: "DiTi 200µL LiHa", channels: [1, 2] } },
+    aspirate({ source: "Single Tube", channels: [1, 2], wells: ["Single Tube", "Single Tube"] })
+  ], deck, types);
+  assert.equal(hasErrorAt(findings, 2), true);
+  assert.equal(hasMessage(findings, "single 1.5 mL or 0.2 mL tube can serve only one LiHa channel"), true);
+});
+
 for (const item of tests) {
   try {
     item.fn();
