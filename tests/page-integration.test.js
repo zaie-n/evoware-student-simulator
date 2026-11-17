@@ -9,7 +9,7 @@ const inlineScripts = scriptTags.map(match => match[1]).filter(source => source.
 assert.ok(html.includes('<script src="validator.js"></script>'), "index.html must load validator.js");
 assert.ok(html.includes('<script src="worktable.js"></script>'), "index.html must load worktable movement helpers");
 assert.ok(html.includes('id="pauseRun"') && html.includes('id="simAction"'), "Live simulation must expose pause and current-action feedback");
-assert.ok(html.includes("async function executeSimulationCommand(command,token)"), "Run simulation must execute commands through the live simulation engine");
+assert.ok(html.includes("async function executeSimulationCommand(command,token,loopPath=[])"), "Run simulation must execute commands through the live simulation engine");
 assert.ok(html.includes("function moveSimulationArm(label,wells=[])"), "Live worktable must animate the arm to configured labware and wells");
 assert.ok(html.includes('setAttribute("class","simulation-arm-layer")'), "Worktable must include an animated LiHa arm overlay");
 assert.ok(html.includes("simulationPlaying=true"), "Run simulation must execute the method continuously");
@@ -47,6 +47,31 @@ assert.ok(html.includes('select("waste","DiTi Waste to use",wastes,c.params.wast
 assert.ok(html.includes('"Drop DiTi":{channels:[1,2,3,4,5,6,7,8],waste:""}'), "Drop DiTi must start with an explicit unselected waste value");
 assert.ok(html.includes('row.setAttribute("role","button")'), "Command-specific findings must be selectable");
 assert.ok(html.includes("activeChannels.map(ch=>ch-1)"), "Well selection must retain channel gaps relative to channel 1");
+assert.ok(html.includes('let dims=["column","row","well"]'), "Loop options must include only column, row, and well advancement");
+assert.ok(!html.includes('"labware"') || !html.includes('let dims=["column","row","well","labware"]'), "Labware advancement must be removed from loop options");
+assert.ok(html.includes("function applyLoopWellOffsets(command,loopPath)"), "Simulation must calculate well offsets from active loop iterations");
+assert.ok(html.includes("executeSimulationCommand(command,token,step.loopPath)"), "Each executed command must receive its active nested loop path");
+const offsetStart = html.indexOf("function applyLoopWellOffsets(command,loopPath){");
+const offsetEnd = html.indexOf("\\nfunction describeSimulationCommand", offsetStart);
+assert.ok(offsetStart >= 0 && offsetEnd > offsetStart, "Loop well offset helper must be present");
+const offsetSource = html.slice(offsetStart, offsetEnd);
+const applyOffsets = new Function("command","loopPath","getLabwareItems","wellLayout","commandTarget", offsetSource + "\\nreturn applyLoopWellOffsets;");
+const plate = {label:"Plate A",name:"96 Well Microplate"};
+const getPlate = () => [plate];
+const plateLayout = () => ({rows:8,cols:12,kind:"plate"});
+const targetLabel = command => command.params.source || command.params.destination || command.params.target;
+const makeCommand = (name, scope, wells, options) => ({name,params:{[scope]:"Plate A",wells,loopOptions:{enabled:true,[scope]:options}}});
+const advance = applyOffsets(makeCommand("Aspirate","source",["B3","E3"],{row:{enabled:true,step:1}}),[{name:"Outer",cycle:2,total:3}],getPlate,plateLayout,targetLabel);
+assert.deepEqual(advance.params.wells,["C3","F3"], "Row advancement must preserve columns and multi-channel spacing");
+const columns = applyOffsets(makeCommand("Dispense","destination",["B3","E3"],{column:{enabled:true,step:2}}),[{name:"Outer",cycle:2,total:3}],getPlate,plateLayout,targetLabel);
+assert.deepEqual(columns.params.wells,["B5","E5"], "Column advancement must preserve rows and apply the configured step");
+const wells = applyOffsets(makeCommand("Mix","target",["B3","E3"],{well:{enabled:true,step:1}}),[{name:"Outer",cycle:2,total:3}],getPlate,plateLayout,targetLabel);
+assert.deepEqual(wells.params.wells,["B4","E4"], "Well advancement must move sequentially through the plate");
+const nested = applyOffsets(makeCommand("Aspirate","source",["B3"],{row:{enabled:true,step:1}}),[{name:"Outer",cycle:2,total:3},{name:"Inner",cycle:3,total:4}],getPlate,plateLayout,targetLabel);
+assert.deepEqual(nested.params.wells,["E3"], "Nested loop offsets must accumulate across enclosing iterations");
+const outOfBounds = applyOffsets(makeCommand("Aspirate","source",["H12"],{row:{enabled:true,step:1}}),[{name:"Outer",cycle:2,total:3}],getPlate,plateLayout,targetLabel);
+assert.deepEqual(outOfBounds.params.wells,["OUT OF RANGE"], "Loop advancement must not wrap beyond the edge of labware");
+
 assert.ok(html.includes('target.scrollIntoView({block:"nearest",behavior:"smooth"})'), "Selecting a finding must scroll its command into view");
 assert.ok(inlineScripts.length > 0, "index.html must contain its application script");
 
