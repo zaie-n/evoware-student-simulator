@@ -15,7 +15,9 @@ assert.ok(html.includes('deck=Array.from({length:8},()=>null)'), "Worktable must
 assert.ok(html.includes('grid-template-columns:repeat(8,minmax(0,1fr))') && html.includes('min-width:0;width:100%'), "Eight worktable positions must fit the available workspace width");
 assert.ok(html.indexOf('<section class="panel workpanel">') > html.indexOf('id="infopadPanel"') && html.indexOf('<section class="panel workpanel">') < html.indexOf('<section class="panel simulation-controls-panel">'), "Worktable must sit beneath INFOPAD in the workspace column");
 assert.ok(html.includes('"Start Timer":{timerName:"mix_timer",seconds:30}') && html.includes('"Wait for Timer":{timerName:"mix_timer"}'), "Start Timer and Wait for Timer must share a default timer name");
-assert.ok(html.includes('input("timerName","Timer name"') && html.includes('input("timerName","Timer name to wait for"'), "Both timer commands must expose a timer-name input");
+assert.ok(html.includes('input("timerName","Timer name"') && html.includes('input("timerName","Timer name to wait for"'), "Start Timer and Wait for Timer must expose their shared timer-name property");
+assert.ok(!html.includes('input("timer","Timer name"'), "Wait for Timer must not show a redundant second timer-name field");
+assert.ok(html.includes('await waitForNamedTimer(String(command.params.timerName||"").trim(),token)'), "Wait for Timer must match the Start Timer name through the single timerName property");
 assert.ok(html.includes('simulationTimers[timerName]={startedAt:Date.now(),durationMs:Math.max(0,Number(command.params.seconds)||0)*1000}'), "Start Timer must record its named duration and start time");
 assert.ok(html.includes('await waitForNamedTimer(String(command.params.timerName||"").trim(),token)'), "Wait for Timer must block execution until its named timer reaches the configured duration");
 assert.ok(html.includes('timer.startedAt+timer.durationMs-Date.now()') && html.includes('await new Promise(resolve=>setTimeout(resolve,remaining))'), "Wait for Timer must wait only for the remaining time on the named timer");
