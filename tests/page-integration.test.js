@@ -50,7 +50,7 @@ assert.equal(variablePlan.filter(step => step.commandIndex === 7).length, 3, "Re
 
 assert.ok(html.includes('input("value","Numeric value or existing variable name"'), "Set Variable must accept a custom numeric value or a variable reference");
 assert.ok(html.includes('input("cycles","Loop cycles or variable name"'), "Begin Loop must accept a variable name such as SAMPLE_CNT");
-assert.ok(html.includes('const resolved=resolveValue(params.cycles)'), "Execution planning must resolve variable-driven loop counts");
+assert.ok(html.includes('resolved=resolveValue(params.cycles)'), "Execution planning must resolve variable-driven loop counts");
 assert.ok(html.includes('variables[name]=value'), "Set Variable must update the variable environment used by subsequent loops");
 assert.ok(html.includes("for(let cycle=1;cycle<=cycles;cycle++)appendRange(i+1,end"), "Loop cycles must repeat the commands inside the matching loop");
 assert.ok(html.includes("loopPath.map(x=>x.name+\" \"+x.cycle+\"/\"+x.total)"), "Execution feedback must identify the active loop iteration");
