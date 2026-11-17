@@ -49,6 +49,15 @@ const variablePlan = makePlan([
 ]);
 assert.equal(variablePlan.filter(step => step.commandIndex === 3).length, 12, "SAMPLE_CNT must expand the first loop to the user's numeric sample count");
 assert.equal(variablePlan.filter(step => step.commandIndex === 6).length, 3, "Resetting SAMPLE_CNT must change the next loop's iteration count");
+
+const partialSamplePlan = makePlan([
+  {name:"Set Variable",params:{name:"SAMPLE_CNT",value:12}},
+  {name:"Begin Loop",params:{loopName:"Partial sample loop",cycles:"SAMPLE_CNT"}},
+  {name:"Get DiTi",params:{tips:"DiTi 200µL LiHa",channels:[1,2,3,4,5,6,7,8]}},
+  {name:"End Loop",params:{loopName:"Partial sample loop"}}
+]);
+assert.deepEqual(partialSamplePlan.filter(step => step.commandIndex === 2).map(step => step.variables.SAMPLE_CNT), [12,4], "SAMPLE_CNT should decrement from 12 to 4 between the 8-tip and 4-tip cycles");
+
 const samplePlan = makePlan([
   {name:"Set Variable",params:{name:"Num_Samples",value:12}},
   {name:"Set Variable",params:{name:"SAMPLE_CNT",value:"Num_Samples"}},
