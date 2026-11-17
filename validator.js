@@ -12,15 +12,21 @@
     "96 Well Microplate - MagPlat",
     "Trough 100ml",
     "1.5mL tube",
-    "0.2mL tube"
+    "0.2mL tube",
+    "Tube 13mm 16 Pos"
   ]);
 
   function getLabwareItems(deck) {
     return (deck || []).flatMap((carrier, pos) => {
       if (!carrier) return [];
-      return (carrier.items || [])
+      const physical = (carrier.items || [])
         .map((item, site) => item ? { ...item, pos, site, carrier: carrier.name } : null)
         .filter(Boolean);
+      if (carrier.name === "Tube 13mm 16 Pos") {
+        const rackLabel = carrier.rackLabel || ("Tube 13mm 16 Pos — Rack " + (pos + 1));
+        return [{ name: carrier.name, label: rackLabel, pos, site: -1, carrier: carrier.name, rackItems: carrier.items || [], isTubeRack: true }, ...physical];
+      }
+      return physical;
     });
   }
 
@@ -105,6 +111,7 @@
   }
 
   function isSiteCompatible(item, carrierTypes) {
+    if (item.isTubeRack) return item.carrier === "Tube 13mm 16 Pos";
     const definition = carrierTypes && carrierTypes[item.carrier];
     if (!definition) return false;
     const allowed = definition.siteCompatible && definition.siteCompatible[item.site]
@@ -273,6 +280,12 @@
           if (invalidWells.length) {
             add("error", n, "The selected position" + (invalidWells.length === 1 ? " " : "s ") + invalidWells.join(", ") + " do not exist on " + item.label + ".");
           }
+          if (layout.kind === "tubes" && item.isTubeRack) {
+            const emptyPositions = wells.filter(well => !item.rackItems[Number(well) - 1]);
+            if (emptyPositions.length) add("error", n, "Carrier position" + (emptyPositions.length === 1 ? " " : "s ") + emptyPositions.join(", ") + " on " + item.label + " are empty. Select only occupied tube positions.");
+            const sequential = wells.every((well, position) => Number(well) === Number(wells[0]) + position);
+            if (wells.length && !sequential) add("error", n, "Tube carrier positions must be consecutive and in carrier order. Each mounted channel maps to the next tube position.");
+          }
           if (wells.length !== channels.length) {
             add("error", n, "Select exactly " + channels.length + " labware position" + (channels.length === 1 ? "" : "s") + " for the selected channels.");
           }
@@ -287,7 +300,7 @@
           }
           if (layout.kind === "single" && channels.length > 1) {
             add("error", n, "A single 1.5 mL or 0.2 mL tube can serve only one LiHa channel. Use a 16-position tube carrier to handle multiple tubes in parallel.");
-          } else if (layout.kind !== "single" && wells.length === channels.length && invalidWells.length === 0 &&
+          } else if (layout.kind !== "single" && !(layout.kind === "tubes" && item.isTubeRack) && wells.length === channels.length && invalidWells.length === 0 &&
               channels.every(channel => Number.isInteger(channel) && channel >= 1 && channel <= 8)) {
             const rowIndexes = wells.map(well =>
               layout.kind === "plate" ? String(well).charCodeAt(0) - 65 : Number(well) - 1
