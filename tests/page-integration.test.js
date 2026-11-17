@@ -18,13 +18,13 @@ assert.ok(html.includes('"Start Timer":{timerName:"mix_timer",seconds:30}') && h
 assert.ok(html.includes('input("timerName","Timer name"') && html.includes('input("timerName","Timer name to wait for"'), "Start Timer and Wait for Timer must expose their shared timer-name property");
 assert.ok(!html.includes('input("timer","Timer name"'), "Wait for Timer must not show a redundant second timer-name field");
 assert.ok(html.includes('await waitForNamedTimer(String(command.params.timerName||"").trim(),token)'), "Wait for Timer must match the Start Timer name through the single timerName property");
-assert.ok(html.includes('simulationTimers[timerName]={startedAt:Date.now(),durationMs:Math.max(0,Number(command.params.seconds)||0)*1000}'), "Start Timer must record its named duration and start time");
+assert.ok(html.includes('simulationTimers[timerName]={startedAt:Date.now(),durationMs:Math.max(0,Number(activeCommand.params.seconds)||0)*1000}'), "Start Timer must record its named duration and start time");
 assert.ok(html.includes('await waitForNamedTimer(String(command.params.timerName||"").trim(),token)'), "Wait for Timer must block execution until its named timer reaches the configured duration");
 assert.ok(html.includes('timer.startedAt+timer.durationMs-Date.now()') && html.includes('await new Promise(resolve=>setTimeout(resolve,remaining))'), "Wait for Timer must wait only for the remaining time on the named timer");
 assert.ok(html.includes('simulationTimers={};mountedSimulationChannels={};'), "A fresh simulation run must clear prior timer state");
 
 assert.ok(html.includes('id="pauseRun"') && html.includes('id="simAction"'), "Live simulation must expose pause and current-action feedback");
-assert.ok(html.includes("async function executeSimulationCommand(command,token,loopPath=[],sampleChannels=null)"), "Run simulation must execute commands through the live simulation engine");
+assert.ok(html.includes("async function executeSimulationCommand(command,token,loopPath=[],sampleChannels=null,variableValues={})"), "Run simulation must execute commands through the live simulation engine");
 assert.ok(html.includes("function moveSimulationArm(label,wells=[])"), "Live worktable must animate the arm to configured labware and wells");
 assert.ok(html.includes('setAttribute("class","simulation-arm-layer")'), "Worktable must include an animated LiHa arm overlay");
 assert.ok(html.includes("simulationPlaying=true"), "Run simulation must execute the method continuously");
@@ -118,7 +118,7 @@ assert.ok(html.includes("activeChannels.map(ch=>ch-1)"), "Well selection must re
 assert.ok(html.includes('let dims=["column","row","well"]'), "Loop options must include only column, row, and well advancement");
 assert.ok(!html.includes('"labware"') || !html.includes('let dims=["column","row","well","labware"]'), "Labware advancement must be removed from loop options");
 assert.ok(html.includes("function applyLoopWellOffsets(command,loopPath)"), "Simulation must calculate well offsets from active loop iterations");
-assert.ok(html.includes("executeSimulationCommand(command,token,step.loopPath,step.sampleChannels)"), "Each executed command must receive its active nested loop path");
+assert.ok(html.includes("executeSimulationCommand(command,token,step.loopPath,step.sampleChannels,step.variables||{})"), "Each executed command must receive its active nested loop path");
 const offsetStart = html.indexOf("function applyLoopWellOffsets(command,loopPath){");
 const offsetEnd = html.indexOf("\nfunction describeSimulationCommand", offsetStart);
 assert.ok(offsetStart >= 0 && offsetEnd > offsetStart, "Loop well offset helper must be present");
