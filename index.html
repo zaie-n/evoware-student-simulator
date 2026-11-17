@@ -729,8 +729,8 @@ function buildExecutionPlan(){
       }
       variables.SAMPLE_CNT=0;
      }else{
-      plan.push({commandIndex:i,loopPath:path,loopBoundary:"begin",sampleCount:requested,tipsPerCycle});
-      plan.push({commandIndex:end,loopPath:path,loopBoundary:"end",sampleCountRemaining:requested});
+      plan.push({commandIndex:i,loopPath:path,loopBoundary:"begin",sampleCount:requested,tipsPerCycle,variables:{...variables}});
+      plan.push({commandIndex:end,loopPath:path,loopBoundary:"end",sampleCountRemaining:requested,variables:{...variables}});
      }
     }else{
      const resolved=resolveValue(rawCycles),cycles=Math.max(1,Math.floor(Number.isFinite(resolved)?resolved:1));
@@ -759,7 +759,7 @@ function prepareRun(){
  for(const command of method){const p=command.params||{};if(command.name!=="Set Variable"||!p.askAtRun)continue;
   const entered=prompt(p.prompt||("Enter "+(p.name||"value")),String(p.value??""));
   if(entered===null){$("runFeedback").textContent="Run cancelled. No simulation steps were started.";return false}
-  const value=Number(entered),min=Number(p.min??1),max=Number(p.max??16);
+  const value=evaluateNumericExpression(entered,overrides),min=evaluateNumericExpression(p.min??1,overrides),max=evaluateNumericExpression(p.max??16,overrides);
   if(!Number.isInteger(value)||value<min||value>max){alert("Enter a whole number from "+min+" to "+max+".");$("runFeedback").textContent="Run not started. The sample count must be a whole number from "+min+" to "+max+".";return false}
   overrides[p.name]=value;
  }
