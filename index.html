@@ -139,7 +139,7 @@ const carrierTypes={
 const colors={"96 Well Microplate":"blue","96 Well Microplate - MagPlat":"blue","DiTi 1000µL LiHa":"yellow","DiTi 200µL LiHa":"yellow","DiTi Waste":"green","Trough 100ml":"green","1.5mL tube":"purple","0.2mL tube":"purple"};
 const icons={"Aspirate":"↑","Dispense":"↓","Mix":"↻","Get DiTi":"▤","Drop DiTi":"▧","Begin Loop":"↻","End Loop":"↘","Set Variable":"ƒ","If – Then":"◇","User Prompt":"▣","Start Timer":"◷","Wait for Timer":"◴"};
 const defaults={"Get DiTi":{tips:"DiTi 200µL LiHa",channels:[1,2,3,4,5,6,7,8]},"Drop DiTi":{channels:[1,2,3,4,5,6,7,8],waste:""},"Aspirate":{source:"",volume:23,liquidClass:"Water",channels:[1,2,3,4,5,6,7,8],wells:[]},"Dispense":{destination:"",volume:23,liquidClass:"Water",channels:[1,2,3,4,5,6,7,8],wells:[]},"Mix":{volume:100,cycles:3},"Begin Loop":{loopName:"",cycles:8},"End Loop":{loopName:""},"Set Variable":{name:"sample_count",value:16},"If – Then":{condition:"sample_count > 0"},"User Prompt":{message:"Check reagent reservoirs"},"Start Timer":{timerName:"mix_timer",seconds:30},"Wait for Timer":{timerName:"mix_timer"}};
-let method=[],selected=-1,deck=Array.from({length:8},()=>null),selectedDeck=null,validated=false,runIndex=0,runSteps=[],dragItem=null,dragMove=null,dragCommandId=null,dropIndex=null,dropAfter=false;let simulationPlaying=false,simulationBusy=false,simulationRunId=0,simulationTimer=null,mountedSimulationChannels={},simulationTimers={};
+let method=[],selected=-1,deck=Array.from({length:8},()=>null),selectedDeck=null,validated=false,runIndex=0,runSteps=[],dragItem=null,dragMove=null,dragCommandId=null,dropIndex=null,dropAfter=false,runVariableOverrides={};let simulationPlaying=false,simulationBusy=false,simulationRunId=0,simulationTimer=null,mountedSimulationChannels={},simulationTimers={};
 function log(s){$("log").innerHTML+=`<br>${new Date().toLocaleTimeString()} ${s}`;$("log").scrollTop=$("log").scrollHeight}
 function getLabwareItems(){return deck.flatMap((c,pos)=>c?c.items.map((x,site)=>x?{...x,pos,site,carrier:c.name}:null).filter(Boolean):[])}
 function getLabwareLabels(){return getLabwareItems().map(x=>x.label)}
@@ -650,7 +650,8 @@ function validate(){
  $("run").disabled=!validated;$("stepRun").disabled=!validated;
  log(validated?"METHOD READY":"VALIDATION ERRORS FOUND");
 }
-function buildExecutionPlan(overrides={}){
+function buildExecutionPlan(){
+ const overrides=typeof runVariableOverrides!=="undefined"?runVariableOverrides:{};
  const endForBegin=new Map(),stack=[];
  method.forEach((command,index)=>{
   if(command.name==="Begin Loop")stack.push(index);
@@ -724,6 +725,7 @@ function prepareRun(){
   if(!Number.isInteger(value)||value<min||value>max){alert("Enter a whole number from "+min+" to "+max+".");$("runFeedback").textContent="Run not started. The sample count must be a whole number from "+min+" to "+max+".";return false}
   overrides[p.name]=value;
  }
+ runVariableOverrides=overrides;
  simulationRunId++;simulationPlaying=false;simulationBusy=false;clearTimeout(simulationTimer);runIndex=0;runSteps=buildExecutionPlan(overrides);simulationTimers={};mountedSimulationChannels={};updateSimulationArmTips();clearSimulationHighlight();
  $("progress").style.width="0%";$("percent").textContent="0%";$("status").textContent="STATUS: READY TO RUN";$("runFeedback").textContent="Simulation ready. "+runSteps.length+" execution steps, including loop iterations.";
  $("stepRun").disabled=!runSteps.length;$("pauseRun").hidden=true;$("run").textContent="▶ Run simulation";return true;
