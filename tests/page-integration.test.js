@@ -159,10 +159,13 @@ assert.ok(html.includes('["SAMPLE_CNT","Custom Variable"]'), "Set Variable shoul
 assert.ok(html.includes('password!=="purify"'), "Premade bead-cleanup templates should require the instructor password");
 assert.ok(html.includes('waste-stream-symbol'), "DiTi Waste should render as a waste-stream outline, not a channel bank");
 
-assert.ok(html.includes('dot.className="mini-well"+(layout.kind==="tubes"?" tube-well":"")'), "Tube-rack positions should render as individual tube symbols");
-assert.ok(html.includes('dot.title="Tube "+(r+1)+" — one channel position"'), "Each tube position should identify its one-channel capacity");
-assert.ok(html.includes('L.kind==="single"?n===1'), "A single tube should not be shared across multiple selected channels");
-assert.ok(html.includes('L.kind==="tubes"?"▯"'), "Tube positions should have a distinct symbol in the liquid-handling well picker");
+assert.ok(html.includes("isTubeRack:true") && html.includes("rackItems:c.items"), "A 16-position carrier should appear as one virtual labware entry in command selectors");
+assert.ok(html.includes('z.className="tube-rack-position empty dropzone"') && html.includes('z.className="tube-rack-position occupied labware purple"'), "The worktable editor should show all rack positions and distinguish empty from occupied tubes");
+assert.ok(html.includes('L.kind==="single"?n===1'), "A standalone tube should not be shared across multiple selected channels");
+assert.ok(html.includes('occupied=L.kind!=="tubes"||!!item.rackItems?.[r]'), "The liquid-handling picker must grey out empty tube carrier positions");
+assert.ok(html.includes('L.kind==="tubes"?r+index:r+channelOffsets[index]'), "Mounted channels must map sequentially to the selected carrier positions, independent of channel numbering");
+assert.ok(html.includes("Tube 13mm 16 Pos — Rack "), "Each tube carrier must retain a unique rack-level labware label");
+assert.ok(html.includes('carrier[data-label]'), "The simulation arm should target the tube carrier as a whole");
 
 const expressionStart = html.indexOf("function evaluateNumericExpression");
 const expressionEnd = html.indexOf("\nfunction addChannelPicker", expressionStart);
