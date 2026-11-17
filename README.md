@@ -59,3 +59,8 @@ The project uses independently authored code and interface styling. It does not 
 ## Limitations
 
 This simulator is for instruction only. It does not connect to a physical liquid handler and must not be used to control laboratory equipment or validate a real instrument protocol.
+
+
+### Instructor-only preloaded protocols
+
+The premade bead-cleanup protocol buttons are hidden by default in the student-facing version. To show them, open `index.html` and change `const PRELOADED_PROTOCOLS_ENABLED = false;` near the top of the application script to `true`. Commit the change and GitHub Pages will publish the buttons. Change it back to `false` to hide them again. Both protocol loaders retain the existing instructor password prompt (`purify`). This is a front-end convenience gate, not secure access control: the password and template code are present in the public client-side source, so do not use it to protect confidential protocols.
