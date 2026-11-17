@@ -158,6 +158,12 @@ assert.ok(html.includes('input("cycles","Loop cycles"'), "Loop cycle field shoul
 assert.ok(html.includes('["SAMPLE_CNT","Custom Variable"]'), "Set Variable should offer SAMPLE_CNT and Custom Variable choices");
 assert.ok(html.includes('password!=="purify"'), "Premade bead-cleanup templates should require the instructor password");
 assert.ok(html.includes('waste-stream-symbol'), "DiTi Waste should render as a waste-stream outline, not a channel bank");
+
+assert.ok(html.includes('dot.className="mini-well"+(layout.kind==="tubes"?" tube-well":"")'), "Tube-rack positions should render as individual tube symbols");
+assert.ok(html.includes('dot.title="Tube "+(r+1)+" — one channel position"'), "Each tube position should identify its one-channel capacity");
+assert.ok(html.includes('L.kind==="single"?n===1'), "A single tube should not be shared across multiple selected channels");
+assert.ok(html.includes('L.kind==="tubes"?"▯"'), "Tube positions should have a distinct symbol in the liquid-handling well picker");
+
 const expressionStart = html.indexOf("function evaluateNumericExpression");
 const expressionEnd = html.indexOf("\nfunction addChannelPicker", expressionStart);
 assert.ok(expressionStart >= 0 && expressionEnd > expressionStart, "Arithmetic expression evaluator should be present");
