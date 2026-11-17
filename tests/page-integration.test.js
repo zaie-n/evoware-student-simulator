@@ -36,17 +36,16 @@ const planSource = html.slice(planStart, planEnd);
 const makePlan = new Function("method", planSource + "\nreturn buildExecutionPlan();");
 const variablePlan = makePlan([
   {name:"Set Variable",params:{name:"Num_Samples",value:12}},
-  {name:"Set Variable",params:{name:"SAMPLE_CNT",value:"Num_Samples"}},
-  {name:"Begin Loop",params:{loopName:"Bead addition",cycles:"SAMPLE_CNT"}},
+  {name:"Begin Loop",params:{loopName:"Bead addition",cycles:"Num_Samples"}},
   {name:"User Prompt",params:{message:"Sample operation"}},
   {name:"End Loop",params:{loopName:"Bead addition"}},
-  {name:"Set Variable",params:{name:"SAMPLE_CNT",value:3}},
-  {name:"Begin Loop",params:{loopName:"Elution",cycles:"SAMPLE_CNT"}},
+  {name:"Set Variable",params:{name:"Another_Count",value:3}},
+  {name:"Begin Loop",params:{loopName:"Elution",cycles:"Another_Count"}},
   {name:"User Prompt",params:{message:"Elution operation"}},
   {name:"End Loop",params:{loopName:"Elution"}}
 ]);
 assert.equal(variablePlan.filter(step => step.commandIndex === 3).length, 12, "SAMPLE_CNT must expand the first loop to the user's numeric sample count");
-assert.equal(variablePlan.filter(step => step.commandIndex === 7).length, 3, "Resetting SAMPLE_CNT must change the next loop's iteration count");
+assert.equal(variablePlan.filter(step => step.commandIndex === 6).length, 3, "Resetting SAMPLE_CNT must change the next loop's iteration count");
 const samplePlan = makePlan([
   {name:"Set Variable",params:{name:"Num_Samples",value:12}},
   {name:"Set Variable",params:{name:"SAMPLE_CNT",value:"Num_Samples"}},
@@ -63,6 +62,20 @@ assert.equal(getTipSteps.length,2,"12 samples on an 8-channel LiHa must create t
 assert.deepEqual(getTipSteps.map(step=>step.sampleChannels.length),[8,4],"The final cycle must select only the remaining four channels");
 assert.deepEqual(aspirateSteps.map(step=>step.sampleChannels.length),[8,4],"All sample-dependent pipetting commands must use the same partial final tip mask");
 assert.deepEqual(aspirateSteps[1].sampleChannels,[1,2,3,4],"The final cycle must retain physical channel identity and use the first four selected tips");
+const resetSamplePlan = makePlan([
+  {name:"Set Variable",params:{name:"Num_Samples",value:12}},
+  {name:"Set Variable",params:{name:"SAMPLE_CNT",value:"Num_Samples"}},
+  {name:"Begin Loop",params:{loopName:"First sample loop",cycles:"SAMPLE_CNT"}},
+  {name:"Get DiTi",params:{channels:[1,2,3,4,5,6,7,8]}},
+  {name:"End Loop",params:{loopName:"First sample loop"}},
+  {name:"Set Variable",params:{name:"SAMPLE_CNT",value:"Num_Samples"}},
+  {name:"Begin Loop",params:{loopName:"Second sample loop",cycles:"SAMPLE_CNT"}},
+  {name:"Get DiTi",params:{channels:[1,2,3,4,5,6,7,8]}},
+  {name:"End Loop",params:{loopName:"Second sample loop"}}
+]);
+assert.equal(resetSamplePlan.filter(step=>step.commandIndex===3).length,2,"The first SAMPLE_CNT loop must cover 12 samples in two cycles");
+assert.equal(resetSamplePlan.filter(step=>step.commandIndex===7).length,2,"Reassigning SAMPLE_CNT must restore the sample count for the next loop");
+
 
 
 assert.ok(html.includes('input("value","Numeric value or existing variable name"'), "Set Variable must accept a custom numeric value or a variable reference");
